@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <style>
+    html, body {
+      margin: 0; padding: 0; overflow: hidden; touch-action: none;
+      background: radial-gradient(circle at 60% 30%, #2a3f2f 0%, #12201A 55%, #0a130e 100%);
+    }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.166.1/build/three.module.js"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+
+const COLORS = {
+  moss900: 0x12201a,
+  moss800: 0x1b2e24,
+  moss700: 0x26402f,
+  moss600: 0x33543e,
+  islandTop: 0x4a7a4f,
+  islandSide: 0x2c4a30,
+  ember600: 0xc97f2e,
+  ember500: 0xe8a24b,
+  sage500: 0x8fa891,
+  coral500: 0xd96c5f,
+  gold500: 0xd4b25a,
+  parchment: 0xf0ead6,
+  window_lit: 0xffd98a,
+  window_dark: 0x1a2620,
+  concrete: 0x9a9a92,
+};
+
+const BUILDING_STYLES = {
+  dining: { body: 0xb5652d, roof: 0xe8a24b, roofType: 'pitch', accessory: 'sign', w: 0.85, d: 0.75, baseH: 0.85 },
+  groceries: { body: 0xa8402f, roof: 0xc9c9be, roofType: 'gambrel', accessory: 'garden', w: 1.0, d: 0.8, baseH: 0.7 },
+  transport: { body: 0x6b7a70, roof: 0x6b7a70, roofType: 'canopy', accessory: 'tracks', w: 0.9, d: 0.6, baseH: 0.35 },
+  entertainment: { body: 0xe8ddc8, roof: COLORS.gold500, roofType: 'spire', accessory: 'band', w: 0.5, d: 0.5, baseH: 1.5 },
+  shopping: { body: 0xe4dcc4, roof: COLORS.ember600, roofType: 'awning', accessory: 'awning', w: 0.95, d: 0.8, baseH: 0.85 },
+  subscriptions: { body: 0x8a8a82, roof: 0x8a8a82, roofType: 'mast', accessory: 'antenna', w: 0.45, d: 0.45, baseH: 1.1 },
+  other: { body: COLORS.moss700, roof: 0xa8642f, roofType: 'pitch', accessory: null, w: 0.7, d: 0.7, baseH: 0.65 },
+};
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0x0e1a13, 11, 25);
+
+// Orthographic camera locked to a 45deg isometric pitch — no perspective
+// distortion, clean "board game" look. Horizontal orbit (yaw) stays
+// drag-controlled since that's the interaction that actually matters;
+// only the elevation angle is fixed.
+const FIXED_PITCH = Math.PI / 4; // 45 degrees
+const ORTHO_VIEW_SIZE = 6.2;
+let camAngle = 0.6;
+
+const aspect = window.innerWidth / window.innerHeight;
+const camera = new THREE.OrthographicCamera(
+  -ORTHO_VIEW_SIZE * aspect, ORTHO_VIEW_SIZE * aspect,
+  ORTHO_VIEW_SIZE, -ORTHO_VIEW_SIZE,
+  0.1, 100
+);
+const camDist = 14;
+updateCameraPosition();
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+// ---- Demand-based rendering ----
+// renderer.render() is only actually called when needsRender is true.
+// This is the ONE thing that's gated — the requestAnimationFrame loop
+// itself still runs continuously (cheap: it just checks flags), but the
+// expensive GPU render call is skipped on frames where nothing changed.
+// Ambient decorations that used to animate every frame unconditionally
+// (island bob, blinking-light pulse, bank ornament spin) will now only
+// visibly advance on frames that render for some OTHER reason (a drag,
+// a GSAP tween, a health change) — they go visually static while the
+// scene is fully idle, which is the real, unavoidable trade-off of true
+// demand rendering. Everything that must stay correct — camera drag,
+// GSAP tweens, particle bursts, the health-driven grow/shrink lerp —
+// explicitly requests a render itself, so none of that silently breaks.
+let needsRender = true; // true so the very first frame always renders
+function requestRender() { needsRender = true; }
+
+const hemi = new THREE.HemisphereLight(0xfff1d0, 0x1b2e24, 0.7);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffe6b3, 1.5);
+sun.position.set(6, 9, 3);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+sun.shadow.camera.left = -7;
+sun.shadow.camera.right = 7;
+sun.shadow.camera.top = 7;
+sun.shadow.camera.bottom = -7;
+sun.shadow.camera.near = 1;
+sun.shadow.camera.far = 20;
+sun.shadow.bias = -0.002;
+scene.add(sun);
+const fill = new THREE.AmbientLight(0x8fa891, 0.25);
+scene.add(fill);
+
+const islandGroup = new THREE.Group();
+scene.add(islandGroup);
+
+const topGeo = new THREE.CylinderGeometry(6.4, 6.4, 0.35, 48);
+const topMat = new THREE.MeshStandardMaterial({ color: COLORS.islandTop, roughness: 0.85 });
+const islandTop = new THREE.Mesh(topGeo, topMat);
+islandTop.receiveShadow = true;
+islandGroup.add(islandTop);
+
+const sideGeo = new THREE.CylinderGeometry(6.1, 5.5, 0.6, 48);
+const sideMat = new THREE.MeshStandardMaterial({ color: COLORS.islandSide, roughness: 0.9 });
+const islandSide = new THREE.Mesh(sideGeo, sideMat);
+islandSide.position.y = -0.45;
+islandGroup.add(islandSide);
+
+const shadowGeo = new THREE.CircleGeometry(6.2, 48);
+const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 });
+const groundShadow = new THREE.Mesh(shadowGeo, shadowMat);
+groundShadow.rotation.x = -Math.PI / 2;
+groundShadow.position.y = -1.4;
+scene.add(groundShadow);
+
+const ringGeo = new THREE.RingGeometry(3.5, 3.6, 64);
+const ringMat = new THREE.MeshBasicMaterial({ color: COLORS.gold500, side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
+const ring = new THREE.Mesh(ringGeo, ringMat);
+ring.rotation.x = -Math.PI / 2;
+ring.position.y = 0.19;
+islandGroup.add(ring);
+
+function makeBody(style) {
+  const geo = new THREE.BoxGeometry(style.w, style.baseH, style.d);
+  const mat = new THREE.MeshStandardMaterial({ color: style.body, roughness: 0.75 });
+  const body = new THREE.Mesh(geo, mat);
+  body.position.y = style.baseH / 2;
+  body.castShadow = true;
+  body.receiveShadow = true;
+  return body;
+}
+function makeWindow(style) {
+  const geo = new THREE.PlaneGeometry(style.w * 0.5, 0.16);
+  const mat = new THREE.MeshBasicMaterial({ color: COLORS.window_dark });
+  const win = new THREE.Mesh(geo, mat);
+  win.position.set(0, style.baseH * 0.55, style.d / 2 + 0.01);
+  return win;
+}
+function makeScaffold(style) {
+  const geo = new THREE.BoxGeometry(style.w * 1.15, style.baseH * 1.1, style.d * 1.15);
+  const edges = new THREE.EdgesGeometry(geo);
+  const mat = new THREE.LineBasicMaterial({ color: 0x8a8a7a });
+  const scaffold = new THREE.LineSegments(edges, mat);
+  scaffold.position.y = style.baseH / 2;
+  scaffold.visible = false;
+  return scaffold;
+}
+function makeCrack(style) {
+  const points = [
+    new THREE.Vector3(-style.w * 0.15, style.baseH * 0.85, style.d / 2 + 0.02),
+    new THREE.Vector3(style.w * 0.05, style.baseH * 0.5, style.d / 2 + 0.02),
+    new THREE.Vector3(-style.w * 0.1, style.baseH * 0.15, style.d / 2 + 0.02),
+  ];
+  const geo = new THREE.BufferGeometry().setFromPoints(points);
+  const mat = new THREE.LineBasicMaterial({ color: 0x2a2a25 });
+  const crack = new THREE.Line(geo, mat);
+  crack.visible = false;
+  return crack;
+}
+
+function addRoof(group, style) {
+  if (style.roofType === 'pitch') {
+    const geo = new THREE.ConeGeometry(style.w * 0.75, 0.4, 4);
+    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.6 });
+    const roof = new THREE.Mesh(geo, mat);
+    roof.rotation.y = Math.PI / 4;
+    roof.position.y = style.baseH + 0.2;
+    group.add(roof);
+  } else if (style.roofType === 'gambrel') {
+    const panelGeo = new THREE.BoxGeometry(style.w * 1.05, 0.06, style.d * 0.75);
+    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.6 });
+    const left = new THREE.Mesh(panelGeo, mat);
+    left.position.set(0, style.baseH + 0.18, -style.d * 0.18);
+    left.rotation.x = 0.55;
+    const right = new THREE.Mesh(panelGeo, mat);
+    right.position.set(0, style.baseH + 0.18, style.d * 0.18);
+    right.rotation.x = -0.55;
+    group.add(left, right);
+  } else if (style.roofType === 'canopy') {
+    const canopyGeo = new THREE.BoxGeometry(style.w * 1.3, 0.05, style.d * 1.4);
+    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.5 });
+    const canopy = new THREE.Mesh(canopyGeo, mat);
+    canopy.position.y = style.baseH + 0.35;
+    group.add(canopy);
+    const postGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.35, 6);
+    const postMat = new THREE.MeshStandardMaterial({ color: 0x5a5a52 });
+    [[-style.w * 0.4, -style.d * 0.4], [style.w * 0.4, -style.d * 0.4]].forEach(([x, z]) => {
+      const post = new THREE.Mesh(postGeo, postMat);
+      post.position.set(x, style.baseH + 0.17, z);
+      group.add(post);
+    });
+  } else if (style.roofType === 'spire') {
+    const geo = new THREE.ConeGeometry(style.w * 0.55, 0.55, 10);
+    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.4 });
+    const roof = new THREE.Mesh(geo, mat);
+    roof.position.y = style.baseH + 0.27;
+    group.add(roof);
+  } else if (style.roofType === 'awning') {
+    const geo = new THREE.BoxGeometry(style.w * 1.02, 0.08, style.d * 1.02);
+    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.6 });
+    const roof = new THREE.Mesh(geo, mat);
+    roof.position.y = style.baseH + 0.05;
+    group.add(roof);
+  } else if (style.roofType === 'mast') {
+    const geo = new THREE.ConeGeometry(style.w * 0.5, 0.2, 8);
+    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.5 });
+    const roof = new THREE.Mesh(geo, mat);
+    roof.position.y = style.baseH + 0.1;
+    group.add(roof);
+  }
+}
+
+const blinkingLights = [];
+
+function addAccessory(group, style) {
+  if (style.accessory === 'sign') {
+    const signGeo = new THREE.BoxGeometry(style.w * 0.6, 0.14, 0.03);
+    const signMat = new THREE.MeshStandardMaterial({ color: COLORS.parchment, emissive: 0x3a2f1a, roughness: 0.5 });
+    const sign = new THREE.Mesh(signGeo, signMat);
+    sign.position.set(0, style.baseH + 0.42, style.d / 2 - 0.05);
+    group.add(sign);
+    for (let i = -1; i <= 1; i += 1) {
+      const bulbGeo = new THREE.SphereGeometry(0.025, 6, 6);
+      const bulbMat = new THREE.MeshBasicMaterial({ color: COLORS.window_lit });
+      const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+      bulb.position.set(i * style.w * 0.3, style.baseH + 0.02, style.d / 2 + 0.05);
+      group.add(bulb);
+      blinkingLights.push({ mesh: bulb, phase: Math.random() * Math.PI * 2, subtle: true });
+    }
+  } else if (style.accessory === 'garden') {
+    const patchGeo = new THREE.BoxGeometry(0.55, 0.04, 0.4);
+    const patchMat = new THREE.MeshStandardMaterial({ color: 0x3a5230, roughness: 1 });
+    const patch = new THREE.Mesh(patchGeo, patchMat);
+    patch.position.set(style.w * 0.85, 0.02, 0);
+    group.add(patch);
+    for (let i = -1; i <= 1; i++) {
+      const rowGeo = new THREE.BoxGeometry(0.5, 0.02, 0.05);
+      const rowMat = new THREE.MeshStandardMaterial({ color: 0x2a3f22 });
+      const row = new THREE.Mesh(rowGeo, rowMat);
+      row.position.set(style.w * 0.85, 0.045, i * 0.13);
+      group.add(row);
+    }
+  } else if (style.accessory === 'tracks') {
+    const railGeo = new THREE.BoxGeometry(0.05, 0.03, 1.1);
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x3a3a35 });
+    [-0.15, 0.15].forEach((x) => {
+      const rail = new THREE.Mesh(railGeo, railMat);
+      rail.position.set(x, 0.015, style.d * 0.9);
+      group.add(rail);
+    });
+    const benchGeo = new THREE.BoxGeometry(style.w * 0.5, 0.08, 0.12);
+    const benchMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a });
+    const bench = new THREE.Mesh(benchGeo, benchMat);
+    bench.position.set(0, 0.06, -style.d * 0.5);
+    group.add(bench);
+  } else if (style.accessory === 'band') {
+    const bandGeo = new THREE.CylinderGeometry(style.w * 0.32, style.w * 0.32, 0.08, 10);
+    const bandMat = new THREE.MeshStandardMaterial({ color: COLORS.coral500 });
+    const band = new THREE.Mesh(bandGeo, bandMat);
+    band.position.y = style.baseH * 0.7;
+    group.add(band);
+  } else if (style.accessory === 'awning') {
+    const awningGeo = new THREE.BoxGeometry(style.w * 1.1, 0.05, 0.3);
+    const awningMat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.5 });
+    const awning = new THREE.Mesh(awningGeo, awningMat);
+    awning.rotation.x = -0.35;
+    awning.position.set(0, style.baseH * 0.65, style.d / 2 + 0.15);
+    group.add(awning);
+  } else if (style.accessory === 'antenna') {
+    const mastGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.5, 6);
+    const mastMat = new THREE.MeshStandardMaterial({ color: 0x5a5a52 });
+    const mast = new THREE.Mesh(mastGeo, mastMat);
+    mast.position.y = style.baseH + 0.35;
+    group.add(mast);
+    const bulbGeo = new THREE.SphereGeometry(0.05, 8, 8);
+    const bulbMat = new THREE.MeshBasicMaterial({ color: COLORS.coral500 });
+    const bulb = new THREE.Mesh(bulbGeo, bulbMat);
+    bulb.position.y = style.baseH + 0.6;
+    group.add(bulb);
+    blinkingLights.push({ mesh: bulb, phase: 0, subtle: false });
+  }
+}
+
+let buildings = [];
+
+function buildCity(districts) {
+  for (const b of buildings) islandGroup.remove(b.group);
+  buildings = [];
+  blinkingLights.length = 0;
+
+  districts.forEach((d, i) => {
+    const angle = (i / districts.length) * Math.PI * 2;
+    const radius = 3.55;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    const style = BUILDING_STYLES[d.id] || BUILDING_STYLES.other;
+
+    const group = new THREE.Group();
+    group.position.set(x, 0.19, z);
+    group.lookAt(0, 0.19, 0);
+
+    const body = makeBody(style);
+    body.userData.districtId = d.id;
+    group.add(body);
+
+    addRoof(group, style);
+    addAccessory(group, style);
+
+    const windowMesh = makeWindow(style);
+    group.add(windowMesh);
+
+    const scaffold = makeScaffold(style);
+    group.add(scaffold);
+
+    const crack = makeCrack(style);
+    group.add(crack);
+
+    group.traverse((obj) => {
+      if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
+    });
+
+    islandGroup.add(group);
+
+    buildings.push({
+      districtId: d.id, group, body, windowMesh, scaffold, crack, style,
+      baseColor: new THREE.Color(style.body), targetScale: 1, currentScale: 1,
+    });
+  });
+}
+
+function applyHealth(states) {
+  for (const b of buildings) {
+    const s = states.find((x) => x.districtId === b.districtId);
+    if (!s) continue;
+    b.targetScale = 0.6 + (s.healthPct / 100) * 0.55;
+    b.windowMesh.material.color.set(s.healthPct >= 55 ? COLORS.window_lit : COLORS.window_dark);
+    b.scaffold.visible = s.healthPct < 40;
+    b.crack.visible = s.healthPct < 25;
+    const damage = Math.max(0, Math.min(1, (40 - s.healthPct) / 40));
+    const grey = new THREE.Color(COLORS.concrete);
+    b.body.material.color.copy(b.baseColor).lerp(grey, damage * 0.7);
+  }
+}
+
+const bankGroup = new THREE.Group();
+bankGroup.position.y = 0.19;
+islandGroup.add(bankGroup);
+
+const bankTierHeight = 0.4;
+const bankMeshes = [];
+let bankOrnament = null;
+
+function rebuildBank(floors) {
+  for (const m of bankMeshes) bankGroup.remove(m);
+  bankMeshes.length = 0;
+
+  const tierCount = Math.min(floors, 6);
+  let y = 0;
+  for (let i = 0; i < tierCount; i++) {
+    const w = 0.85 * Math.pow(0.86, i);
+    const geo = new THREE.BoxGeometry(w, bankTierHeight, w);
+    const mat = new THREE.MeshStandardMaterial({ color: COLORS.parchment, roughness: 0.5, emissive: 0x2a2010, emissiveIntensity: 0.15 });
+    const tier = new THREE.Mesh(geo, mat);
+    tier.position.y = y + bankTierHeight / 2;
+    tier.scale.set(0.001, 0.001, 0.001);
+    bankGroup.add(tier);
+    bankMeshes.push(tier);
+    animatePop(tier, 220 * i);
+
+    const winGeo = new THREE.PlaneGeometry(w * 0.4, 0.14);
+    const winMat = new THREE.MeshBasicMaterial({ color: COLORS.window_lit });
+    const win = new THREE.Mesh(winGeo, winMat);
+    win.position.set(0, y + bankTierHeight / 2, w / 2 + 0.01);
+    bankGroup.add(win);
+    bankMeshes.push(win);
+
+    y += bankTierHeight;
+  }
+
+  const roofGeo = new THREE.ConeGeometry(0.5 * Math.pow(0.86, tierCount - 1), 0.4, 8);
+  const roofMat = new THREE.MeshStandardMaterial({ color: COLORS.gold500, roughness: 0.35 });
+  const roof = new THREE.Mesh(roofGeo, roofMat);
+  roof.position.y = y + 0.2;
+  bankGroup.add(roof);
+  bankMeshes.push(roof);
+
+  const ornamentGeo = new THREE.OctahedronGeometry(0.08, 0);
+  const ornamentMat = new THREE.MeshStandardMaterial({ color: COLORS.gold500, roughness: 0.2, metalness: 0.3 });
+  bankOrnament = new THREE.Mesh(ornamentGeo, ornamentMat);
+  bankOrnament.position.y = y + 0.45;
+  bankGroup.add(bankOrnament);
+  bankMeshes.push(bankOrnament);
+
+  bankGroup.traverse((obj) => {
+    if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
+  });
+}
+rebuildBank(4);
+
+function animatePop(mesh, delay) {
+  if (window.gsap) {
+    gsap.to(mesh.scale, { x: 1, y: 1, z: 1, duration: 0.45, delay: delay / 1000, ease: 'back.out(1.7)', onUpdate: requestRender });
+    return;
+  }
+  // Fallback if GSAP failed to load from the CDN — same shape, hand-rolled.
+  const start = performance.now() + delay;
+  function step(now) {
+    if (now < start) { requestAnimationFrame(step); return; }
+    const t = Math.min((now - start) / 350, 1);
+    const s = Math.max(0.001, easeOutBack(t));
+    mesh.scale.set(s, s, s);
+    if (t < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+function easeOutBack(t) {
+  const c1 = 1.70158, c3 = c1 + 1;
+  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+}
+
+function burst(position, color, count, spreadSpeed) {
+  const geo = new THREE.BufferGeometry();
+  const positions = new Float32Array(count * 3);
+  const velocities = [];
+  for (let i = 0; i < count; i++) {
+    positions[i * 3] = position.x;
+    positions[i * 3 + 1] = position.y;
+    positions[i * 3 + 2] = position.z;
+    velocities.push(new THREE.Vector3(
+      (Math.random() - 0.5) * spreadSpeed,
+      Math.random() * spreadSpeed + 0.5,
+      (Math.random() - 0.5) * spreadSpeed
+    ));
+  }
+  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  const mat = new THREE.PointsMaterial({ color, size: 0.07, transparent: true, opacity: 1 });
+  const points = new THREE.Points(geo, mat);
+  scene.add(points);
+
+  const startTime = performance.now();
+  function step() {
+    const elapsed = (performance.now() - startTime) / 1000;
+    if (elapsed > 1.1) { scene.remove(points); geo.dispose(); mat.dispose(); return; }
+    const pos = geo.attributes.position;
+    for (let i = 0; i < count; i++) {
+      pos.array[i * 3] += velocities[i].x * 0.016;
+      pos.array[i * 3 + 1] += velocities[i].y * 0.016;
+      pos.array[i * 3 + 2] += velocities[i].z * 0.016;
+      velocities[i].y -= 0.02;
+    }
+    pos.needsUpdate = true;
+    mat.opacity = Math.max(0, 1 - elapsed / 1.1);
+    requestRender();
+    requestAnimationFrame(step);
+  }
+  step();
+}
+
+function triggerSpend(districtId) {
+  const b = buildings.find((x) => x.districtId === districtId);
+  if (!b) return;
+  const worldPos = new THREE.Vector3();
+  b.group.getWorldPosition(worldPos);
+  burst(worldPos, 0x8a7a5a, 14, 1.2);
+  shake(b.group);
+}
+function triggerSave() {
+  const worldPos = new THREE.Vector3();
+  bankGroup.getWorldPosition(worldPos);
+  worldPos.y += 0.6;
+  burst(worldPos, COLORS.gold500, 22, 1.6);
+}
+function shake(group) {
+  const baseY = 0.19;
+  const start = performance.now();
+  function step() {
+    const elapsed = performance.now() - start;
+    if (elapsed > 300) { group.position.y = baseY; return; }
+    group.position.y = baseY + Math.sin(elapsed * 0.08) * 0.03 * (1 - elapsed / 300);
+    requestRender();
+    requestAnimationFrame(step);
+  }
+  step();
+}
+
+let dragging = false;
+let lastX = 0, lastY = 0;
+function updateCameraPosition() {
+  const horizontalDist = Math.cos(FIXED_PITCH) * camDist;
+  const height = Math.sin(FIXED_PITCH) * camDist;
+  camera.position.set(Math.cos(camAngle) * horizontalDist, height, Math.sin(camAngle) * horizontalDist);
+  camera.lookAt(0, 0.4, 0);
+}
+renderer.domElement.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
+window.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  const dx = e.clientX - lastX;
+  lastX = e.clientX; lastY = e.clientY;
+  camAngle -= dx * 0.006; // yaw only — pitch stays locked at 45deg
+  updateCameraPosition();
+  requestRender();
+});
+window.addEventListener('pointerup', () => { dragging = false; });
+
+let downX = 0, downY = 0;
+renderer.domElement.addEventListener('pointerdown', (e) => { downX = e.clientX; downY = e.clientY; });
+renderer.domElement.addEventListener('pointerup', (e) => {
+  const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+  if (moved > 6) return;
+  const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(ndc, camera);
+  const hits = raycaster.intersectObjects(buildings.map((b) => b.body), false);
+  if (hits.length > 0) {
+    const districtId = hits[0].object.userData.districtId;
+    highlightBuilding(districtId);
+    postToReactNative({ type: 'districtPress', districtId });
+  }
+});
+
+function highlightBuilding(districtId) {
+  const b = buildings.find((x) => x.districtId === districtId);
+  if (!b || !window.gsap) return;
+
+  gsap.to(b.body.scale, { x: 1.15, z: 1.15, duration: 0.12, ease: 'power2.out', yoyo: true, repeat: 1, onUpdate: requestRender, onComplete: () => b.body.scale.set(1, 1, 1) });
+
+  const mat = b.body.material;
+  const originalEmissive = mat.emissive.clone();
+  gsap.to(mat.emissive, {
+    r: 0.4, g: 0.32, b: 0.1, duration: 0.15, yoyo: true, repeat: 1, onUpdate: requestRender,
+    onComplete: () => mat.emissive.copy(originalEmissive),
+  });
+}
+
+function postToReactNative(payload) {
+  if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(payload));
+}
+
+window.terraSetDistricts = function (districtsJson) { buildCity(JSON.parse(districtsJson)); requestRender(); };
+window.terraSetHealth = function (statesJson) { applyHealth(JSON.parse(statesJson)); requestRender(); };
+window.terraSetBank = function (bankJson) { rebuildBank(JSON.parse(bankJson).floors); requestRender(); };
+window.terraTriggerSpend = function (districtId) { triggerSpend(districtId); requestRender(); };
+window.terraTriggerSave = function () { triggerSave(); requestRender(); };
+
+window.addEventListener('resize', () => {
+  const newAspect = window.innerWidth / window.innerHeight;
+  camera.left = -ORTHO_VIEW_SIZE * newAspect;
+  camera.right = ORTHO_VIEW_SIZE * newAspect;
+  camera.top = ORTHO_VIEW_SIZE;
+  camera.bottom = -ORTHO_VIEW_SIZE;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  requestRender();
+});
+
+const clock = new THREE.Clock();
+let ambientSparkleTimer = 0;
+function animate() {
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), 0.05);
+  const elapsed = clock.elapsedTime;
+
+  islandGroup.position.y = Math.sin(elapsed * 0.35) * 0.06;
+
+  let anyLerping = false;
+  let anyScaffoldVisible = false;
+  for (const b of buildings) {
+    if (Math.abs(b.targetScale - b.currentScale) > 0.001) anyLerping = true;
+    b.currentScale += (b.targetScale - b.currentScale) * Math.min(dt * 3, 1);
+    b.group.scale.set(1, b.currentScale, 1);
+    if (b.scaffold.visible) {
+      anyScaffoldVisible = true;
+      b.scaffold.rotation.y = Math.sin(elapsed * 3 + b.group.position.x) * 0.02;
+    }
+  }
+
+  for (const light of blinkingLights) {
+    const speed = light.subtle ? 1.5 : 3;
+    const intensity = light.subtle ? 0.3 : 0.6;
+    const s = 1 + Math.sin(elapsed * speed + light.phase) * intensity;
+    light.mesh.scale.set(s, s, s);
+  }
+
+  if (bankOrnament) bankOrnament.rotation.y = elapsed * 0.6;
+
+  ambientSparkleTimer += dt;
+  if (ambientSparkleTimer > 4) {
+    ambientSparkleTimer = 0;
+    const worldPos = new THREE.Vector3();
+    bankGroup.getWorldPosition(worldPos);
+    worldPos.y += 0.7;
+    burst(worldPos, COLORS.gold500, 4, 0.6);
+  }
+
+  // Health changes must keep animating smoothly until they settle, and a
+  // struggling district's scaffold wobble should stay visible — both are
+  // legitimate reasons to keep rendering, on top of drag/GSAP/state-push.
+  if (anyLerping || anyScaffoldVisible || dragging) requestRender();
+
+  if (needsRender) {
+    renderer.render(scene, camera);
+    needsRender = false;
+  }
+}
+animate();
+
+postToReactNative({ type: 'SCENE_READY' });
+
+if (!window.ReactNativeWebView) {
+  const DEMO_DISTRICTS = [
+    { id: 'dining', label: 'Dining', icon: '🍜' },
+    { id: 'groceries', label: 'Groceries', icon: '🥬' },
+    { id: 'transport', label: 'Transport', icon: '🚇' },
+    { id: 'entertainment', label: 'Entertainment', icon: '🎭' },
+    { id: 'shopping', label: 'Shopping', icon: '🛍️' },
+    { id: 'subscriptions', label: 'Subscriptions', icon: '📡' },
+    { id: 'other', label: 'Other', icon: '🌾' },
+  ];
+  const DEMO_HEALTH = [
+    { districtId: 'dining', healthPct: 78 },
+    { districtId: 'groceries', healthPct: 92 },
+    { districtId: 'transport', healthPct: 65 },
+    { districtId: 'entertainment', healthPct: 55 },
+    { districtId: 'shopping', healthPct: 18 },
+    { districtId: 'subscriptions', healthPct: 80 },
+    { districtId: 'other', healthPct: 70 },
+  ];
+  buildCity(DEMO_DISTRICTS);
+  applyHealth(DEMO_HEALTH);
+  rebuildBank(4);
+  setTimeout(() => triggerSave(), 2000);
+  setTimeout(() => triggerSpend('shopping'), 4000);
+}
+</script>
+</body>
+</html>

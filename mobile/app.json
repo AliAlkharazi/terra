@@ -1,0 +1,20 @@
+{
+  "expo": {
+    "name": "Terra",
+    "slug": "terra-budget",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "icon": "./assets/icon.png",
+    "splash": { "backgroundColor": "#1B2E24" },
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": false, "bundleIdentifier": "com.terra.budget" },
+    "android": {
+      "package": "com.terra.budget",
+      "edgeToEdgeEnabled": true,
+      "adaptiveIcon": { "backgroundColor": "#1B2E24" }
+    },
+    "plugins": ["expo-font"],
+    "extra": { "apiUrl": "http://localhost:4000" }
+  }
+}
