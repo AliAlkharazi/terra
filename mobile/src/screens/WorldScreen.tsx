@@ -67,6 +67,9 @@ export function WorldScreen({ navigation }: Props) {
             </View>
           </View>
           <Text style={styles.narrator}>{line}</Text>
+          <Pressable style={styles.unityLink} onPress={() => navigation.navigate('UnityWorld')}>
+            <Text style={styles.unityLinkText}>Unity host</Text>
+          </Pressable>
         </View>
 
         {showFlatGrid ? (
@@ -88,6 +91,7 @@ export function WorldScreen({ navigation }: Props) {
           />
         ) : (
           <View style={styles.canvasWrap}>
+            {/* Interim picture. The CoC-quality World is the Unity project, not this WebView. */}
             <Scene3DBoundary fallback={<View style={styles.canvasWrap} />} onError={() => setIs3DAvailable(false)}>
               <WorldWebView
                 districts={districts}
@@ -141,6 +145,15 @@ const styles = StyleSheet.create({
   eyebrow: { fontFamily: type.bodyBold, fontSize: type.size.xs, color: colors.sage300, letterSpacing: 1.5 },
   title: { fontFamily: type.display, fontSize: type.size.display, color: colors.parchment, marginTop: space.xs },
   narrator: { fontFamily: type.body, fontSize: type.size.base, color: colors.textOnMossDim, marginTop: space.sm },
+  unityLink: {
+    alignSelf: 'flex-start',
+    marginTop: space.sm,
+    backgroundColor: colors.moss700,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.md,
+    paddingVertical: space.xs,
+  },
+  unityLinkText: { fontFamily: type.bodyBold, fontSize: type.size.xs, color: colors.parchment },
   grid: { paddingHorizontal: space.md, paddingTop: space.md, paddingBottom: space.xxl * 2 },
   canvasWrap: { flex: 1, marginBottom: space.xxl * 2 },
   hint: { position: 'absolute', bottom: space.sm, alignSelf: 'center', fontFamily: type.body, fontSize: type.size.xs, color: colors.textOnMossDim },

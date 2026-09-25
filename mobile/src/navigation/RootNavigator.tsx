@@ -6,6 +6,7 @@ import { WorldScreen } from '@/screens/WorldScreen';
 import { AddTransactionScreen } from '@/screens/AddTransactionScreen';
 import { DistrictDetailScreen } from '@/screens/DistrictDetailScreen';
 import { EditBudgetScreen } from '@/screens/EditBudgetScreen';
+import { UnityWorldScreen } from '@/screens/UnityWorldScreen';
 import { AuthNavigator } from './AuthNavigator';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme/tokens';
@@ -16,6 +17,7 @@ function AppStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="World" component={WorldScreen} />
+      <Stack.Screen name="UnityWorld" component={UnityWorldScreen} />
       <Stack.Screen
         name="AddTransaction"
         component={AddTransactionScreen}

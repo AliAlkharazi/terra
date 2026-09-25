@@ -1,0 +1,12 @@
+{
+  "type": "setDistricts",
+  "districts": [
+    { "key": "dining", "label": "Dining", "icon": "🍜", "monthlyBudget": 250, "spent": 180, "healthPct": 62 },
+    { "key": "groceries", "label": "Groceries", "icon": "🥬", "monthlyBudget": 350, "spent": 90, "healthPct": 88 },
+    { "key": "transport", "label": "Transport", "icon": "🚇", "monthlyBudget": 120, "spent": 110, "healthPct": 34 },
+    { "key": "entertainment", "label": "Entertainment", "icon": "🎭", "monthlyBudget": 100, "spent": 40, "healthPct": 74 },
+    { "key": "shopping", "label": "Shopping", "icon": "🛍️", "monthlyBudget": 150, "spent": 20, "healthPct": 91 },
+    { "key": "subscriptions", "label": "Subscriptions", "icon": "📡", "monthlyBudget": 60, "spent": 60, "healthPct": 48 },
+    { "key": "other", "label": "Other", "icon": "🌾", "monthlyBudget": 100, "spent": 10, "healthPct": 80 }
+  ]
+}
