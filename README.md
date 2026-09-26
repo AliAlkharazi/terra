@@ -52,18 +52,22 @@ Checked on the machine that added this scaffold: no Unity Editor and no Unity Hu
 
 Press **Play**. Click the Game view first so the mouse controls land there.
 
-You should see a ground plane and seven colored block buildings, one per default district (Dining, Groceries, Transport, Entertainment, Shopping, Subscriptions, Other), with a name above each. The camera is isometric.
+You should see a grass field, a central coral **Budget Hall**, and seven district plots — Dining, Groceries, Transport, Entertainment, Shopping, Subscriptions, and Other — in the accent colors from the visual plan, with a sand-colored path from the hall to each plot. The camera is orthographic, pitched **47.5°** down, with yaw fixed at 45°. The first Console line reports that measured pitch.
 
-- Left-drag (or one finger): pan
-- Scroll wheel (or pinch): zoom
-- Right-drag: yaw
-- Click a building: the Console logs `districtPress` and that district’s key
+- Left-drag (or one finger): pan. The view stays on the town.
+- Scroll wheel (or pinch): zoom. Pinch and scroll stop between a neighborhood view (about three districts) and the full town.
+- Double-click (or double-tap) a plot: the camera eases in on that plot, closer than the pinch limit.
+- Click (or tap) a district: the Console logs `districtPress` and the category key (`dining`, `groceries`, `transport`, `entertainment`, `shopping`, `subscriptions`, `other`). Budget Hall logs that it has no category key.
 
-While playing, **Terra → Send Sample Districts** posts the sample JSON into the scene. Heights stay tied to `monthlyBudget`, and colors shift with `healthPct`. That JSON is the same shape the phone builds.
+There is no right-drag orbit. Yaw does not move.
+
+While playing, **Terra → Send Sample Districts** posts the sample JSON into the scene. Building height still follows `monthlyBudget`, and the cube tint follows `healthPct`. The colored pad under each district keeps its accent. That JSON is the same shape the phone builds. The keys are category keys, not Prisma ids.
 
 In the Expo app, **Unity host** on the World screen shows that payload from your live districts. It does not draw 3D. Expo Go cannot embed the Unity view.
 
-### Not in this PR
+If the Game view ignores the mouse, set **Edit → Project Settings → Player → Active Input Handling** to **Input Manager (Old)** or **Both**, then restart the editor. This scene uses Unity’s legacy input (`Input` class). Spike C through F (LOD, wilt materials, caretakers, spend effects) are not in this scene.
+
+### Not in this slice
 
 - No Clash of Clans art, characters, or effects
 - No App Store / Play Store build, and no Unity player embedded in the app

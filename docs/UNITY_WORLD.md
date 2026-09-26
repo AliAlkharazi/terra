@@ -81,16 +81,19 @@ Not in this PR. The mechanical next step after the editor scene looks right:
 
 A common embed package is `@azesmway/react-native-unity`. This repo does not depend on it yet: there is no exported library, and adding the package would break the Expo Go run.
 
-## Placeholder scene
+## Placeholder scene (Spike A + Spike B)
 
-`unity/Assets/Scripts/TerraWorldRoot.cs` builds the first scene:
+`unity/Assets/Scripts/TerraWorldBuilder.cs` builds the town. `TerraWorldPlayBootstrap` runs it on Play if the scene does not already contain `TerraBridge`. The editor menu **Terra → Build World Scene** writes `Assets/Scenes/TerraWorld.unity` on first open. That file is not hand-written YAML.
 
-- Orthographic camera, pitch about 52°, yaw 45° (isometric).
-- Left-drag or one finger pans. Scroll or pinch zooms. Right-drag yaws.
-- One cube per default district in `mobile/src/store/budgetStore.ts` (`dining`, `groceries`, `transport`, `entertainment`, `shopping`, `subscriptions`, `other`).
-- Height follows `monthlyBudget`. A `setDistricts` message recolors by `healthPct`.
+This is Spike A and Spike B from `docs/unity-world/TERRA_UNITY_WORLD_VISUAL_PLAN.md` §11. Spikes C–F are not built.
 
-The scene file `Assets/Scenes/TerraWorld.unity` is created by the editor on first open (`Terra → Build World Scene` if it does not). It is not hand-written YAML. A hand-written scene would be another fake.
+- Orthographic camera. Pitch is **47.5°** down from horizontal (Console logs the measured angle on Play). Yaw is **45°** and fixed.
+- Left-drag or one finger pans, clamped to the town. Scroll or pinch zooms between a neighborhood size (about three districts) and the full map. Double-click or double-tap eases the camera onto that plot, closer than the pinch floor.
+- **Budget Hall** sits in the center. The seven districts sit on the wireframe A plan: Other north, Dining and Groceries on the north corners, Transport and Entertainment on the sides, Shopping and Subscriptions on the south corners. Each plot is a colored cube on a pad. Accent hex values are visual plan §3.1. Paths are line renderers in `#C2B280`.
+- A click or tap logs `districtPress` plus the category key (`dining`, `groceries`, …). That is `District.key`, not Prisma `District.id`.
+- Height still follows `monthlyBudget`. **Terra → Send Sample Districts** recolors the cube by `healthPct`. The pad keeps the district accent.
+
+The scene is the ground, eight building cubes, pads, and seven paths. That is the Spike A content budget (empty scene plus about eight cubes).
 
 ## Explicitly out of scope
 

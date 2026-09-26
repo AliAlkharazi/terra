@@ -272,6 +272,8 @@ Unity import: Generate Mip Maps on; compression ASTC/ETC2; sRGB for albedo; no m
 
 Small, testable slices for engineering (no combat):
 
+Spike A (camera) and Spike B (layout) are implemented in `unity/`. Open that folder in Unity 6.3 LTS and press Play — steps are in the repo README under **Unity World**. Spikes C–F are not in that scene.
+
 ### Spike A — Camera shell
 - [ ] Ortho camera pitch 47.5° ±2°, fixed yaw  
 - [ ] Pan + pinch zoom with clamps  

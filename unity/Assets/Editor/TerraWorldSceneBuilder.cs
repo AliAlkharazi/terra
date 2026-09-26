@@ -104,6 +104,6 @@ public static class TerraWorldSceneBuilder
         PlayerSettings.companyName = "Terra";
         PlayerSettings.productName = "Terra World";
         AssetDatabase.SaveAssets();
-        Debug.Log("[Terra] Saved " + SceneAssetPath + ". Press Play to pan and zoom.");
+        Debug.Log("[Terra] Saved " + SceneAssetPath + ". Press Play: 47.5° camera, Budget Hall, seven districts. Double-tap focuses a plot. A tap logs the category key.");
     }
 }
