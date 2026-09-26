@@ -8,6 +8,7 @@ export type AuthStackParamList = {
 
 export type RootStackParamList = {
   World: undefined;
+  UnityWorld: undefined;
   AddTransaction: { districtId?: DistrictId; mode?: 'spend' | 'income' };
   DistrictDetail: { districtId: DistrictId };
   EditBudget: { districtId: DistrictId };

@@ -4,6 +4,8 @@ import WebView from 'react-native-webview';
 import { AllocationState, BankState, District } from '@/types';
 import type { LastEvent } from '@/store/budgetStore';
 
+/** Interim three.js bridge. The CoC-quality town is unity/. See docs/UNITY_WORLD.md. */
+
 interface Props {
   districts: District[];
   allocationStates: AllocationState[];
