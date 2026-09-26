@@ -1,0 +1,11 @@
+{
+  "type": "setDistricts",
+  "vault": { "key": "vault", "label": "Main Vault", "amount": 1280, "locked": 100 },
+  "districts": [
+    { "key": "dining", "label": "Diner", "icon": "", "monthlyBudget": 250, "available": 40, "spent": 210, "allocated": 250 },
+    { "key": "property", "label": "Home", "icon": "", "monthlyBudget": 200, "available": 180, "spent": 20, "allocated": 200 },
+    { "key": "groceries", "label": "Food", "icon": "", "monthlyBudget": 350, "available": 387, "spent": 90, "allocated": 350 },
+    { "key": "transport", "label": "Travel", "icon": "", "monthlyBudget": 120, "available": 247, "spent": 30, "allocated": 120 },
+    { "key": "bills", "label": "Bills", "icon": "", "monthlyBudget": 80, "available": 125, "spent": 40, "allocated": 80 }
+  ]
+}

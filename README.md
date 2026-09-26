@@ -84,11 +84,53 @@ Simulators can keep `http://localhost:4000`.
 terra/
   README.md          ← this file
   GUIDE.md           ← buttons and features
+  docs/UNITY_WORLD.md
   start-mobile.sh
   start-mobile.bat
   mobile/            ← Expo app
   backend/           ← Express API + Prisma
+  unity/             ← 3D World (Unity 6.3). Not embedded in Expo Go yet.
 ```
+
+---
+
+## Unity World
+
+The Clash of Clans–quality town is the Unity project in `unity/`, on top of this village app (Diner, Home, Food, Travel, Bills, Main Vault). The SVG town stays the in-app picture. Why, and the message contract: [docs/UNITY_WORLD.md](docs/UNITY_WORLD.md).
+
+Unity Editor is a one-time install. This repo does not include the editor, and `Assets/Scenes/TerraWorld.unity` does not exist until Unity creates it.
+
+### Install Unity once (Mac)
+
+1. Download Unity Hub: https://unity.com/download
+2. Sign in. Unity Personal is the free license.
+3. **Installs → Install Editor → Official releases → Unity 6.3 LTS** (`6000.3`).
+   `unity/ProjectSettings/ProjectVersion.txt` pins `6000.3.6f1`. A newer `6000.3` patch is fine. Do not open this project in a `6000.4` or newer Update release.
+4. Skip iOS and Android modules. Those are for a later embed.
+5. **Projects → Add → Add project from disk**, and choose the `unity` folder.
+6. Wait for the first import. It should open `Assets/Scenes/TerraWorld.unity`. If the Hierarchy is empty, use **Terra → Build World Scene**.
+7. After the scene exists, commit `unity/Assets/Scenes/TerraWorld.unity` and the `.meta` files Unity generated.
+
+### What “done” looks like
+
+Press **Play** in the Game view.
+
+You should see a ground plane and six colored blocks in the same ring as the phone town: Diner and Home behind, Main Vault in the center, Food, Travel, and Bills in front, each with a name. The camera is isometric.
+
+- Left-drag (or one finger): pan
+- Scroll wheel (or pinch): zoom
+- Right-drag: yaw
+- Click a building: the Console logs `districtPress` and that key (`dining`, `property`, `vault`, …)
+
+While playing, **Terra → Send Sample Districts** posts the sample JSON. Heights follow the money. A negative available balance turns a building red.
+
+In the Expo app, the **3D** chip on the town (top right) opens the host. It lists the live vault and districts and the JSON. It does not draw 3D. Expo Go cannot embed the Unity view.
+
+### Not in this slice
+
+- No Clash of Clans art, characters, or effects
+- No App Store / Play Store build, and no Unity player inside the app
+- Deposit, Move, Freeze, Ask, and the backup API are unchanged
 
 ---
 

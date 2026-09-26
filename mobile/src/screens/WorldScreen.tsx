@@ -166,6 +166,9 @@ export function WorldScreen({ navigation }: Props) {
         <TapButton style={styles.account} onPress={openAccount} pressedScale={0.92}>
           <Text style={styles.accountText}>{mode === 'synced' ? 'Account' : 'Offline'}</Text>
         </TapButton>
+        <TapButton style={styles.unityChip} onPress={() => navigation.navigate('UnityWorld')} pressedScale={0.92}>
+          <Text style={styles.accountText}>3D</Text>
+        </TapButton>
       </SafeAreaView>
     </LinearGradient>
   );
@@ -344,6 +347,7 @@ const styles = StyleSheet.create({
     color: 'rgba(240,234,214,0.28)',
   },
   account: { position: 'absolute', top: 54, left: space.md },
+  unityChip: { position: 'absolute', top: 54, right: space.md },
   accountText: {
     fontFamily: type.bodyBold,
     fontSize: 11,
