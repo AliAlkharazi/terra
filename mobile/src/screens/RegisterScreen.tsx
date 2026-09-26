@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
+import { TapButton } from '@/components/TapButton';
 import { colors, radius, space, type } from '@/theme/tokens';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/types';
@@ -52,13 +53,13 @@ export function RegisterScreen({ navigation }: Props) {
 
           {error && <Text style={styles.error}>{error}</Text>}
 
-          <Pressable style={styles.primaryButton} onPress={handleRegister} disabled={status === 'loading'}>
+          <TapButton style={styles.primaryButton} onPress={handleRegister} disabled={status === 'loading'}>
             <Text style={styles.primaryButtonText}>{status === 'loading' ? 'Creating…' : 'Create account'}</Text>
-          </Pressable>
+          </TapButton>
 
-          <Pressable style={styles.linkButton} onPress={() => navigation.navigate('Login')}>
+          <TapButton style={styles.linkButton} onPress={() => navigation.navigate('Login')}>
             <Text style={styles.linkText}>Already have an account? Log in</Text>
-          </Pressable>
+          </TapButton>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

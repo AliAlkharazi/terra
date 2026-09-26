@@ -6,16 +6,6 @@ import { prisma } from '../prisma';
 
 export const authRouter = Router();
 
-const DEFAULT_DISTRICTS = [
-  { key: 'dining', label: 'Dining', icon: '🍜', monthlyBudget: 250 },
-  { key: 'groceries', label: 'Groceries', icon: '🥬', monthlyBudget: 350 },
-  { key: 'transport', label: 'Transport', icon: '🚇', monthlyBudget: 120 },
-  { key: 'entertainment', label: 'Entertainment', icon: '🎭', monthlyBudget: 100 },
-  { key: 'shopping', label: 'Shopping', icon: '🛍️', monthlyBudget: 150 },
-  { key: 'subscriptions', label: 'Subscriptions', icon: '📡', monthlyBudget: 60 },
-  { key: 'other', label: 'Other', icon: '🌾', monthlyBudget: 100 },
-];
-
 const credentialsSchema = z.object({ email: z.string().email(), password: z.string().min(8) });
 
 authRouter.post('/register', async (req, res) => {
@@ -27,7 +17,7 @@ authRouter.post('/register', async (req, res) => {
   if (existing) return res.status(409).json({ error: 'Email already registered' });
 
   const passwordHash = await bcrypt.hash(password, 12);
-  const user = await prisma.user.create({ data: { email, passwordHash, districts: { create: DEFAULT_DISTRICTS } } });
+  const user = await prisma.user.create({ data: { email, passwordHash } });
   res.status(201).json({ token: signToken(user.id), userId: user.id });
 });
 

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
+import { TapButton } from '@/components/TapButton';
 import { colors, radius, space, type } from '@/theme/tokens';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/types';
@@ -20,7 +21,6 @@ export function LoginScreen({ navigation }: Props) {
   const handleLogin = async () => {
     clearError();
     await login(email.trim(), password);
-    // On success, the root navigator switches automatically (mode becomes 'synced').
   };
 
   return (
@@ -53,17 +53,17 @@ export function LoginScreen({ navigation }: Props) {
 
           {error && <Text style={styles.error}>{error}</Text>}
 
-          <Pressable style={styles.primaryButton} onPress={handleLogin} disabled={status === 'loading'}>
+          <TapButton style={styles.primaryButton} onPress={handleLogin} disabled={status === 'loading'}>
             <Text style={styles.primaryButtonText}>{status === 'loading' ? 'Logging in…' : 'Log in'}</Text>
-          </Pressable>
+          </TapButton>
 
-          <Pressable style={styles.linkButton} onPress={() => navigation.navigate('Register')}>
+          <TapButton style={styles.linkButton} onPress={() => navigation.navigate('Register')}>
             <Text style={styles.linkText}>Don't have an account? Sign up</Text>
-          </Pressable>
+          </TapButton>
 
-          <Pressable style={styles.linkButton} onPress={() => navigation.navigate('AuthGate')}>
+          <TapButton style={styles.linkButton} onPress={() => navigation.navigate('AuthGate')}>
             <Text style={styles.linkText}>← Back</Text>
-          </Pressable>
+          </TapButton>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -1,60 +1,52 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import WebView from 'react-native-webview';
-import { BankState, District, DistrictState } from '@/types';
+import { AllocationState, BankState, District } from '@/types';
 import type { LastEvent } from '@/store/budgetStore';
 
 interface Props {
   districts: District[];
-  districtStates: DistrictState[];
+  allocationStates: AllocationState[];
   bankState: BankState;
   lastEvent: LastEvent | null;
   onDistrictPress: (districtId: string) => void;
 }
 
-/**
- * Bridges React Native state into the Three.js WebView city scene.
- *
- * Readiness handling: the scene posts { type: 'SCENE_READY' } once its
- * setup (including all window.terraX bridge functions) is complete. Any
- * injectJavaScript calls made before that message arrives are queued
- * in commandQueue rather than dropped — a plain "if not ready, return"
- * gate (the previous approach) silently loses events that fire during
- * app boot, since a dependency-gated useEffect won't re-run just because
- * isReady flipped true with no other prop change. Queueing and flushing
- * on ready fixes that class of bug outright.
- */
-export function WorldWebView({ districts, districtStates, bankState, lastEvent, onDistrictPress }: Props) {
+function toBridgeHealthPayload(states: AllocationState[]) {
+  return states.map((s) => {
+    const healthPct =
+      s.allocated > 0
+        ? Math.max(0, Math.min(100, Math.round((s.available / s.allocated) * 100)))
+        : s.spent > 0
+        ? 0
+        : 100;
+    return { districtId: s.districtId, healthPct, budget: s.allocated };
+  });
+}
+
+export function WorldWebView({ districts, allocationStates, bankState, lastEvent, onDistrictPress }: Props) {
   const webviewRef = useRef<WebView>(null);
-  const [isReady, setIsReady] = useState(false);
+  const isReadyRef = useRef(false);
   const commandQueue = useRef<string[]>([]);
   const lastSeenNonce = useRef(0);
 
   const escape = (obj: unknown) => JSON.stringify(obj).replace(/'/g, "\\'");
 
-  /** Central dispatch: injects immediately if ready, otherwise queues for flush-on-ready. */
-  const dispatch = useCallback(
-    (js: string) => {
-      if (isReady) {
-        webviewRef.current?.injectJavaScript(js);
-      } else {
-        commandQueue.current.push(js);
-      }
-    },
-    [isReady]
-  );
+  const dispatch = useCallback((js: string) => {
+    if (isReadyRef.current) {
+      webviewRef.current?.injectJavaScript(js);
+    } else {
+      commandQueue.current.push(js);
+    }
+  }, []);
 
   useEffect(() => {
     dispatch(`window.terraSetDistricts('${escape(districts)}'); true;`);
-    // districts are effectively static after mount (only budgets change,
-    // which doesn't affect the id/label/icon set) — intentionally only
-    // depends on the array reference, not a deep field.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [districts]);
+  }, [districts, dispatch]);
 
   useEffect(() => {
-    dispatch(`window.terraSetHealth('${escape(districtStates)}'); true;`);
-  }, [districtStates, dispatch]);
+    dispatch(`window.terraSetHealth('${escape(toBridgeHealthPayload(allocationStates))}'); true;`);
+  }, [allocationStates, dispatch]);
 
   useEffect(() => {
     dispatch(`window.terraSetBank('${escape(bankState)}'); true;`);
@@ -65,25 +57,32 @@ export function WorldWebView({ districts, districtStates, bankState, lastEvent, 
     lastSeenNonce.current = lastEvent.nonce;
 
     if (lastEvent.kind === 'spend' && lastEvent.districtId) {
-      dispatch(`window.terraTriggerSpend('${lastEvent.districtId}'); true;`);
-    } else if (lastEvent.kind === 'save') {
-      dispatch(`window.terraTriggerSave(); true;`);
+      const amountArg = lastEvent.amount != null ? `, ${lastEvent.amount}` : '';
+      dispatch(`window.terraTriggerSpend('${lastEvent.districtId}'${amountArg}); true;`);
+    } else if (lastEvent.kind === 'income') {
+      const amountArg = lastEvent.amount != null ? `${lastEvent.amount}` : '';
+      dispatch(`window.terraTriggerSave(${amountArg}); true;`);
     }
   }, [lastEvent, dispatch]);
 
   const handleMessage = useCallback((event: { nativeEvent: { data: string } }) => {
     try {
       const payload = JSON.parse(event.nativeEvent.data);
+
       if (payload.type === 'SCENE_READY') {
-        // Flush everything queued while the scene was still loading, in order.
+        isReadyRef.current = true;
         const queued = commandQueue.current;
         commandQueue.current = [];
         for (const js of queued) {
           webviewRef.current?.injectJavaScript(js);
         }
-        setIsReady(true);
       } else if (payload.type === 'districtPress') {
         onDistrictPress(payload.districtId);
+      } else if (payload.type === 'SCENE_ERROR') {
+        console.error(
+          `[Terra WebView error] ${payload.message}` +
+            (payload.source ? ` (${payload.source}:${payload.line})` : '')
+        );
       }
     } catch {
       // ignore malformed bridge messages

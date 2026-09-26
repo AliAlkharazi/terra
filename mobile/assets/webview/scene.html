@@ -6,12 +6,19 @@
   <style>
     html, body {
       margin: 0; padding: 0; overflow: hidden; touch-action: none;
-      background: radial-gradient(circle at 60% 30%, #2a3f2f 0%, #12201A 55%, #0a130e 100%);
+      background: radial-gradient(circle at 60% 30%, #223326 0%, #131f18 55%, #0a130e 100%);
     }
     canvas { display: block; }
+    #frameCounter {
+      position: fixed; top: 6px; left: 6px; z-index: 999;
+      font-family: monospace; font-size: 11px; color: #8fa891;
+      background: rgba(0,0,0,0.4); padding: 2px 6px; border-radius: 4px;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body>
+<div id="frameCounter">frame: 0</div>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
 <script type="importmap">
 {
@@ -23,505 +30,584 @@
 <script type="module">
 import * as THREE from 'three';
 
-const COLORS = {
-  moss900: 0x12201a,
-  moss800: 0x1b2e24,
-  moss700: 0x26402f,
-  moss600: 0x33543e,
-  islandTop: 0x4a7a4f,
-  islandSide: 0x2c4a30,
-  ember600: 0xc97f2e,
-  ember500: 0xe8a24b,
-  sage500: 0x8fa891,
-  coral500: 0xd96c5f,
-  gold500: 0xd4b25a,
-  parchment: 0xf0ead6,
-  window_lit: 0xffd98a,
-  window_dark: 0x1a2620,
-  concrete: 0x9a9a92,
+window.addEventListener('error', (e) => {
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SCENE_ERROR', message: e.message, source: e.filename, line: e.lineno }));
+  }
+});
+window.addEventListener('unhandledrejection', (e) => {
+  if (window.ReactNativeWebView) {
+    window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'SCENE_ERROR', message: 'Unhandled promise rejection: ' + (e.reason?.message || e.reason) }));
+  }
+});
+
+// =====================================================================
+// PALETTE — restrained: deep green world, dark wood/brass, warm parchment.
+// Euro notes provide the only real color variety, as specified.
+// =====================================================================
+const PALETTE = {
+  worldFog: 0x0e1a13,
+  patchHealthy: 0x3f6b46,
+  patchDry: 0x8a7a4a,
+  patchDepleted: 0x4a4038,
+  baseWood: 0x3a2c22,
+  baseWoodTop: 0x4a3a2c,
+  sign: 0x2c2018,
+  signBrass: 0xb08d4f,
+  coral: 0xd96c5f,
 };
 
-const BUILDING_STYLES = {
-  dining: { body: 0xb5652d, roof: 0xe8a24b, roofType: 'pitch', accessory: 'sign', w: 0.85, d: 0.75, baseH: 0.85 },
-  groceries: { body: 0xa8402f, roof: 0xc9c9be, roofType: 'gambrel', accessory: 'garden', w: 1.0, d: 0.8, baseH: 0.7 },
-  transport: { body: 0x6b7a70, roof: 0x6b7a70, roofType: 'canopy', accessory: 'tracks', w: 0.9, d: 0.6, baseH: 0.35 },
-  entertainment: { body: 0xe8ddc8, roof: COLORS.gold500, roofType: 'spire', accessory: 'band', w: 0.5, d: 0.5, baseH: 1.5 },
-  shopping: { body: 0xe4dcc4, roof: COLORS.ember600, roofType: 'awning', accessory: 'awning', w: 0.95, d: 0.8, baseH: 0.85 },
-  subscriptions: { body: 0x8a8a82, roof: 0x8a8a82, roofType: 'mast', accessory: 'antenna', w: 0.45, d: 0.45, baseH: 1.1 },
-  other: { body: COLORS.moss700, roof: 0xa8642f, roofType: 'pitch', accessory: null, w: 0.7, d: 0.7, baseH: 0.65 },
-};
+const NOTE_COLORS = { 5: 0x9a95a3, 10: 0xb23b3b, 20: 0x1f5fa8, 50: 0xd67e1f, 100: 0x2f7d4f, 200: 0xc9932e };
+const NOTE_DENOMS = [200, 100, 50, 20, 10, 5];
+const COIN_DENOMS = [2, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01];
 
+function coinMaterialKind(denom) {
+  if (denom >= 1) return 'silver';
+  if (denom >= 0.1) return 'gold';
+  return 'copper';
+}
+const COIN_COLORS = { silver: 0xc7c7cc, gold: 0xd4af37, copper: 0xb5691f };
+
+// =====================================================================
+// CANVAS-GENERATED TEXTURES — makes the notes read as real money
+// without any external image assets. Cached per denomination.
+// =====================================================================
+const noteTextureCache = {};
+function getNoteTexture(denom) {
+  if (noteTextureCache[denom]) return noteTextureCache[denom];
+
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 128;
+  const ctx = c.getContext('2d');
+  const color = '#' + NOTE_COLORS[denom].toString(16).padStart(6, '0');
+
+  ctx.fillStyle = color;
+  ctx.fillRect(0, 0, 256, 128);
+
+  for (let i = 0; i < 300; i++) {
+    ctx.fillStyle = `rgba(255,255,255,${Math.random() * 0.05})`;
+    ctx.fillRect(Math.random() * 256, Math.random() * 128, 1.5, 1.5);
+  }
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 5; i++) {
+    const x = 24 + i * 20;
+    ctx.beginPath();
+    ctx.arc(x, 74, 9, Math.PI, 0);
+    ctx.stroke();
+  }
+
+  ctx.fillStyle = 'rgba(255,255,255,0.94)';
+  ctx.font = 'bold 46px Georgia, serif';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(String(denom), 14, 34);
+  ctx.font = 'bold 22px Georgia, serif';
+  ctx.fillText(String(denom), 256 - 54, 128 - 24);
+
+  ctx.font = 'bold 20px Georgia, serif';
+  ctx.fillText('€', 256 - 30, 30);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(4, 4, 248, 120);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.anisotropy = 4;
+  noteTextureCache[denom] = tex;
+  return tex;
+}
+
+let stripTextureCache = null;
+function getStripTexture() {
+  if (stripTextureCache) return stripTextureCache;
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#e9e2c9';
+  ctx.fillRect(0, 0, 64, 64);
+  for (let y = 0; y < 64; y += 4) {
+    ctx.fillStyle = y % 8 === 0 ? 'rgba(90,80,60,0.35)' : 'rgba(90,80,60,0.12)';
+    ctx.fillRect(0, y, 64, 1.5);
+  }
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  stripTextureCache = tex;
+  return tex;
+}
+
+function makeSignTexture(title, subtitle) {
+  const c = document.createElement('canvas');
+  c.width = 320; c.height = 160;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#2c2018';
+  ctx.fillRect(0, 0, 320, 160);
+  ctx.strokeStyle = '#b08d4f';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(6, 6, 308, 148);
+
+  ctx.fillStyle = '#e8dcc0';
+  ctx.textAlign = 'center';
+  ctx.font = 'bold 30px -apple-system, Georgia, serif';
+  ctx.fillText(title.toUpperCase(), 160, 70);
+  ctx.font = '600 26px -apple-system, Georgia, serif';
+  ctx.fillStyle = '#d4af37';
+  ctx.fillText(subtitle, 160, 118);
+
+  return new THREE.CanvasTexture(c);
+}
+
+// =====================================================================
+// SCENE / CAMERA / RENDERER
+// =====================================================================
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0x0e1a13, 11, 25);
+scene.fog = new THREE.Fog(PALETTE.worldFog, 12, 26);
 
-// Orthographic camera locked to a 45deg isometric pitch — no perspective
-// distortion, clean "board game" look. Horizontal orbit (yaw) stays
-// drag-controlled since that's the interaction that actually matters;
-// only the elevation angle is fixed.
-const FIXED_PITCH = Math.PI / 4; // 45 degrees
-const ORTHO_VIEW_SIZE = 6.2;
-let camAngle = 0.6;
+const FIXED_PITCH = Math.PI * 0.24;
+const ORTHO_VIEW_SIZE = 6.6;
+let camAngle = 0.55;
 
-const aspect = window.innerWidth / window.innerHeight;
+const aspect0 = window.innerWidth / window.innerHeight;
 const camera = new THREE.OrthographicCamera(
-  -ORTHO_VIEW_SIZE * aspect, ORTHO_VIEW_SIZE * aspect,
+  -ORTHO_VIEW_SIZE * aspect0, ORTHO_VIEW_SIZE * aspect0,
   ORTHO_VIEW_SIZE, -ORTHO_VIEW_SIZE,
   0.1, 100
 );
-const camDist = 14;
+const camDist = 15;
 updateCameraPosition();
 
 const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 if ('outputColorSpace' in renderer) renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.appendChild(renderer.domElement);
 
-// ---- Demand-based rendering ----
-// renderer.render() is only actually called when needsRender is true.
-// This is the ONE thing that's gated — the requestAnimationFrame loop
-// itself still runs continuously (cheap: it just checks flags), but the
-// expensive GPU render call is skipped on frames where nothing changed.
-// Ambient decorations that used to animate every frame unconditionally
-// (island bob, blinking-light pulse, bank ornament spin) will now only
-// visibly advance on frames that render for some OTHER reason (a drag,
-// a GSAP tween, a health change) — they go visually static while the
-// scene is fully idle, which is the real, unavoidable trade-off of true
-// demand rendering. Everything that must stay correct — camera drag,
-// GSAP tweens, particle bursts, the health-driven grow/shrink lerp —
-// explicitly requests a render itself, so none of that silently breaks.
-let needsRender = true; // true so the very first frame always renders
-function requestRender() { needsRender = true; }
-
-const hemi = new THREE.HemisphereLight(0xfff1d0, 0x1b2e24, 0.7);
+const hemi = new THREE.HemisphereLight(0xfff3d6, 0x1b2e24, 0.55);
 scene.add(hemi);
-const sun = new THREE.DirectionalLight(0xffe6b3, 1.5);
-sun.position.set(6, 9, 3);
+const sun = new THREE.DirectionalLight(0xffdfa8, 1.35);
+sun.position.set(7, 10, 3);
 sun.castShadow = true;
 sun.shadow.mapSize.set(1024, 1024);
-sun.shadow.camera.left = -7;
-sun.shadow.camera.right = 7;
-sun.shadow.camera.top = 7;
-sun.shadow.camera.bottom = -7;
+sun.shadow.camera.left = -8;
+sun.shadow.camera.right = 8;
+sun.shadow.camera.top = 8;
+sun.shadow.camera.bottom = -8;
 sun.shadow.camera.near = 1;
-sun.shadow.camera.far = 20;
-sun.shadow.bias = -0.002;
+sun.shadow.camera.far = 22;
+sun.shadow.bias = -0.0015;
 scene.add(sun);
-const fill = new THREE.AmbientLight(0x8fa891, 0.25);
+const fill = new THREE.DirectionalLight(0x8fa891, 0.22);
+fill.position.set(-5, 6, -4);
 scene.add(fill);
 
-const islandGroup = new THREE.Group();
-scene.add(islandGroup);
-
-const topGeo = new THREE.CylinderGeometry(6.4, 6.4, 0.35, 48);
-const topMat = new THREE.MeshStandardMaterial({ color: COLORS.islandTop, roughness: 0.85 });
-const islandTop = new THREE.Mesh(topGeo, topMat);
-islandTop.receiveShadow = true;
-islandGroup.add(islandTop);
-
-const sideGeo = new THREE.CylinderGeometry(6.1, 5.5, 0.6, 48);
-const sideMat = new THREE.MeshStandardMaterial({ color: COLORS.islandSide, roughness: 0.9 });
-const islandSide = new THREE.Mesh(sideGeo, sideMat);
-islandSide.position.y = -0.45;
-islandGroup.add(islandSide);
-
-const shadowGeo = new THREE.CircleGeometry(6.2, 48);
-const shadowMat = new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.35 });
-const groundShadow = new THREE.Mesh(shadowGeo, shadowMat);
-groundShadow.rotation.x = -Math.PI / 2;
-groundShadow.position.y = -1.4;
-scene.add(groundShadow);
-
-const ringGeo = new THREE.RingGeometry(3.5, 3.6, 64);
-const ringMat = new THREE.MeshBasicMaterial({ color: COLORS.gold500, side: THREE.DoubleSide, transparent: true, opacity: 0.65 });
-const ring = new THREE.Mesh(ringGeo, ringMat);
-ring.rotation.x = -Math.PI / 2;
-ring.position.y = 0.19;
-islandGroup.add(ring);
-
-function makeBody(style) {
-  const geo = new THREE.BoxGeometry(style.w, style.baseH, style.d);
-  const mat = new THREE.MeshStandardMaterial({ color: style.body, roughness: 0.75 });
-  const body = new THREE.Mesh(geo, mat);
-  body.position.y = style.baseH / 2;
-  body.castShadow = true;
-  body.receiveShadow = true;
-  return body;
-}
-function makeWindow(style) {
-  const geo = new THREE.PlaneGeometry(style.w * 0.5, 0.16);
-  const mat = new THREE.MeshBasicMaterial({ color: COLORS.window_dark });
-  const win = new THREE.Mesh(geo, mat);
-  win.position.set(0, style.baseH * 0.55, style.d / 2 + 0.01);
-  return win;
-}
-function makeScaffold(style) {
-  const geo = new THREE.BoxGeometry(style.w * 1.15, style.baseH * 1.1, style.d * 1.15);
-  const edges = new THREE.EdgesGeometry(geo);
-  const mat = new THREE.LineBasicMaterial({ color: 0x8a8a7a });
-  const scaffold = new THREE.LineSegments(edges, mat);
-  scaffold.position.y = style.baseH / 2;
-  scaffold.visible = false;
-  return scaffold;
-}
-function makeCrack(style) {
-  const points = [
-    new THREE.Vector3(-style.w * 0.15, style.baseH * 0.85, style.d / 2 + 0.02),
-    new THREE.Vector3(style.w * 0.05, style.baseH * 0.5, style.d / 2 + 0.02),
-    new THREE.Vector3(-style.w * 0.1, style.baseH * 0.15, style.d / 2 + 0.02),
-  ];
-  const geo = new THREE.BufferGeometry().setFromPoints(points);
-  const mat = new THREE.LineBasicMaterial({ color: 0x2a2a25 });
-  const crack = new THREE.Line(geo, mat);
-  crack.visible = false;
-  return crack;
-}
-
-function addRoof(group, style) {
-  if (style.roofType === 'pitch') {
-    const geo = new THREE.ConeGeometry(style.w * 0.75, 0.4, 4);
-    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.6 });
-    const roof = new THREE.Mesh(geo, mat);
-    roof.rotation.y = Math.PI / 4;
-    roof.position.y = style.baseH + 0.2;
-    group.add(roof);
-  } else if (style.roofType === 'gambrel') {
-    const panelGeo = new THREE.BoxGeometry(style.w * 1.05, 0.06, style.d * 0.75);
-    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.6 });
-    const left = new THREE.Mesh(panelGeo, mat);
-    left.position.set(0, style.baseH + 0.18, -style.d * 0.18);
-    left.rotation.x = 0.55;
-    const right = new THREE.Mesh(panelGeo, mat);
-    right.position.set(0, style.baseH + 0.18, style.d * 0.18);
-    right.rotation.x = -0.55;
-    group.add(left, right);
-  } else if (style.roofType === 'canopy') {
-    const canopyGeo = new THREE.BoxGeometry(style.w * 1.3, 0.05, style.d * 1.4);
-    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.5 });
-    const canopy = new THREE.Mesh(canopyGeo, mat);
-    canopy.position.y = style.baseH + 0.35;
-    group.add(canopy);
-    const postGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.35, 6);
-    const postMat = new THREE.MeshStandardMaterial({ color: 0x5a5a52 });
-    [[-style.w * 0.4, -style.d * 0.4], [style.w * 0.4, -style.d * 0.4]].forEach(([x, z]) => {
-      const post = new THREE.Mesh(postGeo, postMat);
-      post.position.set(x, style.baseH + 0.17, z);
-      group.add(post);
-    });
-  } else if (style.roofType === 'spire') {
-    const geo = new THREE.ConeGeometry(style.w * 0.55, 0.55, 10);
-    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.4 });
-    const roof = new THREE.Mesh(geo, mat);
-    roof.position.y = style.baseH + 0.27;
-    group.add(roof);
-  } else if (style.roofType === 'awning') {
-    const geo = new THREE.BoxGeometry(style.w * 1.02, 0.08, style.d * 1.02);
-    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.6 });
-    const roof = new THREE.Mesh(geo, mat);
-    roof.position.y = style.baseH + 0.05;
-    group.add(roof);
-  } else if (style.roofType === 'mast') {
-    const geo = new THREE.ConeGeometry(style.w * 0.5, 0.2, 8);
-    const mat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.5 });
-    const roof = new THREE.Mesh(geo, mat);
-    roof.position.y = style.baseH + 0.1;
-    group.add(roof);
-  }
-}
-
-const blinkingLights = [];
-
-function addAccessory(group, style) {
-  if (style.accessory === 'sign') {
-    const signGeo = new THREE.BoxGeometry(style.w * 0.6, 0.14, 0.03);
-    const signMat = new THREE.MeshStandardMaterial({ color: COLORS.parchment, emissive: 0x3a2f1a, roughness: 0.5 });
-    const sign = new THREE.Mesh(signGeo, signMat);
-    sign.position.set(0, style.baseH + 0.42, style.d / 2 - 0.05);
-    group.add(sign);
-    for (let i = -1; i <= 1; i += 1) {
-      const bulbGeo = new THREE.SphereGeometry(0.025, 6, 6);
-      const bulbMat = new THREE.MeshBasicMaterial({ color: COLORS.window_lit });
-      const bulb = new THREE.Mesh(bulbGeo, bulbMat);
-      bulb.position.set(i * style.w * 0.3, style.baseH + 0.02, style.d / 2 + 0.05);
-      group.add(bulb);
-      blinkingLights.push({ mesh: bulb, phase: Math.random() * Math.PI * 2, subtle: true });
-    }
-  } else if (style.accessory === 'garden') {
-    const patchGeo = new THREE.BoxGeometry(0.55, 0.04, 0.4);
-    const patchMat = new THREE.MeshStandardMaterial({ color: 0x3a5230, roughness: 1 });
-    const patch = new THREE.Mesh(patchGeo, patchMat);
-    patch.position.set(style.w * 0.85, 0.02, 0);
-    group.add(patch);
-    for (let i = -1; i <= 1; i++) {
-      const rowGeo = new THREE.BoxGeometry(0.5, 0.02, 0.05);
-      const rowMat = new THREE.MeshStandardMaterial({ color: 0x2a3f22 });
-      const row = new THREE.Mesh(rowGeo, rowMat);
-      row.position.set(style.w * 0.85, 0.045, i * 0.13);
-      group.add(row);
-    }
-  } else if (style.accessory === 'tracks') {
-    const railGeo = new THREE.BoxGeometry(0.05, 0.03, 1.1);
-    const railMat = new THREE.MeshStandardMaterial({ color: 0x3a3a35 });
-    [-0.15, 0.15].forEach((x) => {
-      const rail = new THREE.Mesh(railGeo, railMat);
-      rail.position.set(x, 0.015, style.d * 0.9);
-      group.add(rail);
-    });
-    const benchGeo = new THREE.BoxGeometry(style.w * 0.5, 0.08, 0.12);
-    const benchMat = new THREE.MeshStandardMaterial({ color: 0x5a4a3a });
-    const bench = new THREE.Mesh(benchGeo, benchMat);
-    bench.position.set(0, 0.06, -style.d * 0.5);
-    group.add(bench);
-  } else if (style.accessory === 'band') {
-    const bandGeo = new THREE.CylinderGeometry(style.w * 0.32, style.w * 0.32, 0.08, 10);
-    const bandMat = new THREE.MeshStandardMaterial({ color: COLORS.coral500 });
-    const band = new THREE.Mesh(bandGeo, bandMat);
-    band.position.y = style.baseH * 0.7;
-    group.add(band);
-  } else if (style.accessory === 'awning') {
-    const awningGeo = new THREE.BoxGeometry(style.w * 1.1, 0.05, 0.3);
-    const awningMat = new THREE.MeshStandardMaterial({ color: style.roof, roughness: 0.5 });
-    const awning = new THREE.Mesh(awningGeo, awningMat);
-    awning.rotation.x = -0.35;
-    awning.position.set(0, style.baseH * 0.65, style.d / 2 + 0.15);
-    group.add(awning);
-  } else if (style.accessory === 'antenna') {
-    const mastGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.5, 6);
-    const mastMat = new THREE.MeshStandardMaterial({ color: 0x5a5a52 });
-    const mast = new THREE.Mesh(mastGeo, mastMat);
-    mast.position.y = style.baseH + 0.35;
-    group.add(mast);
-    const bulbGeo = new THREE.SphereGeometry(0.05, 8, 8);
-    const bulbMat = new THREE.MeshBasicMaterial({ color: COLORS.coral500 });
-    const bulb = new THREE.Mesh(bulbGeo, bulbMat);
-    bulb.position.y = style.baseH + 0.6;
-    group.add(bulb);
-    blinkingLights.push({ mesh: bulb, phase: 0, subtle: false });
-  }
-}
-
-let buildings = [];
-
-function buildCity(districts) {
-  for (const b of buildings) islandGroup.remove(b.group);
-  buildings = [];
-  blinkingLights.length = 0;
-
-  districts.forEach((d, i) => {
-    const angle = (i / districts.length) * Math.PI * 2;
-    const radius = 3.55;
-    const x = Math.cos(angle) * radius;
-    const z = Math.sin(angle) * radius;
-    const style = BUILDING_STYLES[d.id] || BUILDING_STYLES.other;
-
-    const group = new THREE.Group();
-    group.position.set(x, 0.19, z);
-    group.lookAt(0, 0.19, 0);
-
-    const body = makeBody(style);
-    body.userData.districtId = d.id;
-    group.add(body);
-
-    addRoof(group, style);
-    addAccessory(group, style);
-
-    const windowMesh = makeWindow(style);
-    group.add(windowMesh);
-
-    const scaffold = makeScaffold(style);
-    group.add(scaffold);
-
-    const crack = makeCrack(style);
-    group.add(crack);
-
-    group.traverse((obj) => {
-      if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
-    });
-
-    islandGroup.add(group);
-
-    buildings.push({
-      districtId: d.id, group, body, windowMesh, scaffold, crack, style,
-      baseColor: new THREE.Color(style.body), targetScale: 1, currentScale: 1,
-    });
-  });
-}
-
-function applyHealth(states) {
-  for (const b of buildings) {
-    const s = states.find((x) => x.districtId === b.districtId);
-    if (!s) continue;
-    b.targetScale = 0.6 + (s.healthPct / 100) * 0.55;
-    b.windowMesh.material.color.set(s.healthPct >= 55 ? COLORS.window_lit : COLORS.window_dark);
-    b.scaffold.visible = s.healthPct < 40;
-    b.crack.visible = s.healthPct < 25;
-    const damage = Math.max(0, Math.min(1, (40 - s.healthPct) / 40));
-    const grey = new THREE.Color(COLORS.concrete);
-    b.body.material.color.copy(b.baseColor).lerp(grey, damage * 0.7);
-  }
-}
-
-const bankGroup = new THREE.Group();
-bankGroup.position.y = 0.19;
-islandGroup.add(bankGroup);
-
-const bankTierHeight = 0.4;
-const bankMeshes = [];
-let bankOrnament = null;
-
-function rebuildBank(floors) {
-  for (const m of bankMeshes) bankGroup.remove(m);
-  bankMeshes.length = 0;
-
-  const tierCount = Math.min(floors, 6);
-  let y = 0;
-  for (let i = 0; i < tierCount; i++) {
-    const w = 0.85 * Math.pow(0.86, i);
-    const geo = new THREE.BoxGeometry(w, bankTierHeight, w);
-    const mat = new THREE.MeshStandardMaterial({ color: COLORS.parchment, roughness: 0.5, emissive: 0x2a2010, emissiveIntensity: 0.15 });
-    const tier = new THREE.Mesh(geo, mat);
-    tier.position.y = y + bankTierHeight / 2;
-    tier.scale.set(0.001, 0.001, 0.001);
-    bankGroup.add(tier);
-    bankMeshes.push(tier);
-    animatePop(tier, 220 * i);
-
-    const winGeo = new THREE.PlaneGeometry(w * 0.4, 0.14);
-    const winMat = new THREE.MeshBasicMaterial({ color: COLORS.window_lit });
-    const win = new THREE.Mesh(winGeo, winMat);
-    win.position.set(0, y + bankTierHeight / 2, w / 2 + 0.01);
-    bankGroup.add(win);
-    bankMeshes.push(win);
-
-    y += bankTierHeight;
-  }
-
-  const roofGeo = new THREE.ConeGeometry(0.5 * Math.pow(0.86, tierCount - 1), 0.4, 8);
-  const roofMat = new THREE.MeshStandardMaterial({ color: COLORS.gold500, roughness: 0.35 });
-  const roof = new THREE.Mesh(roofGeo, roofMat);
-  roof.position.y = y + 0.2;
-  bankGroup.add(roof);
-  bankMeshes.push(roof);
-
-  const ornamentGeo = new THREE.OctahedronGeometry(0.08, 0);
-  const ornamentMat = new THREE.MeshStandardMaterial({ color: COLORS.gold500, roughness: 0.2, metalness: 0.3 });
-  bankOrnament = new THREE.Mesh(ornamentGeo, ornamentMat);
-  bankOrnament.position.y = y + 0.45;
-  bankGroup.add(bankOrnament);
-  bankMeshes.push(bankOrnament);
-
-  bankGroup.traverse((obj) => {
-    if (obj.isMesh) { obj.castShadow = true; obj.receiveShadow = true; }
-  });
-}
-rebuildBank(4);
-
-function animatePop(mesh, delay) {
-  if (window.gsap) {
-    gsap.to(mesh.scale, { x: 1, y: 1, z: 1, duration: 0.45, delay: delay / 1000, ease: 'back.out(1.7)', onUpdate: requestRender });
-    return;
-  }
-  // Fallback if GSAP failed to load from the CDN — same shape, hand-rolled.
-  const start = performance.now() + delay;
-  function step(now) {
-    if (now < start) { requestAnimationFrame(step); return; }
-    const t = Math.min((now - start) / 350, 1);
-    const s = Math.max(0.001, easeOutBack(t));
-    mesh.scale.set(s, s, s);
-    if (t < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-function easeOutBack(t) {
-  const c1 = 1.70158, c3 = c1 + 1;
-  return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
-}
-
-function burst(position, color, count, spreadSpeed) {
-  const geo = new THREE.BufferGeometry();
-  const positions = new Float32Array(count * 3);
-  const velocities = [];
-  for (let i = 0; i < count; i++) {
-    positions[i * 3] = position.x;
-    positions[i * 3 + 1] = position.y;
-    positions[i * 3 + 2] = position.z;
-    velocities.push(new THREE.Vector3(
-      (Math.random() - 0.5) * spreadSpeed,
-      Math.random() * spreadSpeed + 0.5,
-      (Math.random() - 0.5) * spreadSpeed
-    ));
-  }
-  geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-  const mat = new THREE.PointsMaterial({ color, size: 0.07, transparent: true, opacity: 1 });
-  const points = new THREE.Points(geo, mat);
-  scene.add(points);
-
-  const startTime = performance.now();
-  function step() {
-    const elapsed = (performance.now() - startTime) / 1000;
-    if (elapsed > 1.1) { scene.remove(points); geo.dispose(); mat.dispose(); return; }
-    const pos = geo.attributes.position;
-    for (let i = 0; i < count; i++) {
-      pos.array[i * 3] += velocities[i].x * 0.016;
-      pos.array[i * 3 + 1] += velocities[i].y * 0.016;
-      pos.array[i * 3 + 2] += velocities[i].z * 0.016;
-      velocities[i].y -= 0.02;
-    }
-    pos.needsUpdate = true;
-    mat.opacity = Math.max(0, 1 - elapsed / 1.1);
-    requestRender();
-    requestAnimationFrame(step);
-  }
-  step();
-}
-
-function triggerSpend(districtId) {
-  const b = buildings.find((x) => x.districtId === districtId);
-  if (!b) return;
-  const worldPos = new THREE.Vector3();
-  b.group.getWorldPosition(worldPos);
-  burst(worldPos, 0x8a7a5a, 14, 1.2);
-  shake(b.group);
-}
-function triggerSave() {
-  const worldPos = new THREE.Vector3();
-  bankGroup.getWorldPosition(worldPos);
-  worldPos.y += 0.6;
-  burst(worldPos, COLORS.gold500, 22, 1.6);
-}
-function shake(group) {
-  const baseY = 0.19;
-  const start = performance.now();
-  function step() {
-    const elapsed = performance.now() - start;
-    if (elapsed > 300) { group.position.y = baseY; return; }
-    group.position.y = baseY + Math.sin(elapsed * 0.08) * 0.03 * (1 - elapsed / 300);
-    requestRender();
-    requestAnimationFrame(step);
-  }
-  step();
-}
-
-let dragging = false;
-let lastX = 0, lastY = 0;
 function updateCameraPosition() {
   const horizontalDist = Math.cos(FIXED_PITCH) * camDist;
   const height = Math.sin(FIXED_PITCH) * camDist;
   camera.position.set(Math.cos(camAngle) * horizontalDist, height, Math.sin(camAngle) * horizontalDist);
-  camera.lookAt(0, 0.4, 0);
+  camera.lookAt(0, 0.3, 0);
 }
+
+// =====================================================================
+// TERRAIN
+// =====================================================================
+function pseudoRandom(seed) {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return x - Math.floor(x);
+}
+function makeIrregularShape(baseRadius, points, jitter, seed) {
+  const shape = new THREE.Shape();
+  for (let i = 0; i <= points; i++) {
+    const a = (i / points) * Math.PI * 2;
+    const r = baseRadius * (1 - jitter / 2 + pseudoRandom(seed + i) * jitter);
+    const x = Math.cos(a) * r;
+    const y = Math.sin(a) * r;
+    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+  }
+  return shape;
+}
+function makePatch(radius, depth, topColor, seed) {
+  const shape = makeIrregularShape(radius, 10, 0.22, seed);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.02, bevelSegments: 2 });
+  const topMat = new THREE.MeshStandardMaterial({ color: topColor, roughness: 0.9 });
+  const sideMat = new THREE.MeshStandardMaterial({ color: 0x2a3a26, roughness: 1 });
+  const mesh = new THREE.Mesh(geo, [topMat, sideMat]);
+  mesh.rotation.x = -Math.PI / 2;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return { mesh, topMat };
+}
+
+const worldGroup = new THREE.Group();
+scene.add(worldGroup);
+
+const baseShape = makeIrregularShape(6.6, 14, 0.1, 99);
+const baseGeo = new THREE.ExtrudeGeometry(baseShape, { depth: 0.55, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.04, bevelSegments: 2 });
+const baseMat = new THREE.MeshStandardMaterial({ color: PALETTE.baseWoodTop, roughness: 0.85 });
+const baseSideMat = new THREE.MeshStandardMaterial({ color: PALETTE.baseWood, roughness: 0.9 });
+const baseMesh = new THREE.Mesh(baseGeo, [baseMat, baseSideMat]);
+baseMesh.rotation.x = -Math.PI / 2;
+baseMesh.position.y = -0.5;
+baseMesh.receiveShadow = true;
+worldGroup.add(baseMesh);
+
+const groundShadow = new THREE.Mesh(
+  new THREE.CircleGeometry(6.9, 48),
+  new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.3 })
+);
+groundShadow.rotation.x = -Math.PI / 2;
+groundShadow.position.y = -1.1;
+scene.add(groundShadow);
+
+// =====================================================================
+// MONEY PILE — a bound "brick" (efficient bulk stand-in) plus a few
+// individually textured loose notes on top.
+// =====================================================================
+const dummy = new THREE.Object3D();
+
+function amountToHeight(amount) {
+  return 0.05 + Math.min(0.6, Math.log2(Math.max(0, amount) / 20 + 1) * 0.085);
+}
+function topDenomForAmount(amount) {
+  if (amount >= 500) return 200;
+  if (amount >= 150) return 100;
+  if (amount >= 60) return 50;
+  if (amount >= 25) return 20;
+  if (amount >= 8) return 10;
+  return 5;
+}
+
+function buildMoneyPile(parentGroup, seedOffset) {
+  const brickGeo = new THREE.BoxGeometry(0.48, 1, 0.28);
+  const stripTex = getStripTexture();
+  const sideMat = new THREE.MeshStandardMaterial({ map: stripTex, roughness: 0.8 });
+  const topMat = new THREE.MeshStandardMaterial({ color: 0xf0ead6, roughness: 0.6 });
+  const brick = new THREE.Mesh(brickGeo, [sideMat, sideMat, topMat, topMat, sideMat, sideMat]);
+  brick.castShadow = true;
+  brick.receiveShadow = true;
+  brick.scale.y = 0.001;
+  brick.position.y = 0.0005;
+  parentGroup.add(brick);
+
+  const toppers = new THREE.Group();
+  parentGroup.add(toppers);
+
+  const looseNotes = [];
+  for (let i = 0; i < 4; i++) {
+    const geo = new THREE.BoxGeometry(0.42, 0.01, 0.22);
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.55 });
+    const note = new THREE.Mesh(geo, mat);
+    note.castShadow = true;
+    note.receiveShadow = true;
+    const jitter = seedOffset + i;
+    note.position.set((pseudoRandom(jitter) - 0.5) * 0.06, i * 0.011, (pseudoRandom(jitter + 5) - 0.5) * 0.04);
+    note.rotation.y = (pseudoRandom(jitter + 10) - 0.5) * 0.5;
+    toppers.add(note);
+    looseNotes.push(note);
+  }
+
+  return { brick, toppers, looseNotes, currentHeight: 0.001 };
+}
+
+function updateMoneyPile(pile, amount, animate) {
+  const targetHeight = amountToHeight(amount);
+  const topDenom = topDenomForAmount(amount);
+  const tex = getNoteTexture(topDenom);
+
+  pile.brick.material[2].map = tex;
+  pile.brick.material[2].needsUpdate = true;
+  pile.looseNotes.forEach((n) => {
+    n.material.map = tex;
+    n.material.needsUpdate = true;
+  });
+
+  const applyHeight = (h) => {
+    pile.brick.scale.y = Math.max(0.02, h);
+    pile.brick.position.y = pile.brick.scale.y * 0.5;
+    pile.toppers.position.y = pile.brick.scale.y + 0.005;
+    pile.currentHeight = h;
+  };
+
+  if (animate && window.gsap) {
+    gsap.to(pile, { currentHeight: targetHeight, duration: 0.6, ease: 'power2.out', onUpdate: () => applyHeight(pile.currentHeight) });
+  } else {
+    applyHeight(targetHeight);
+  }
+}
+
+// =====================================================================
+// COINS — instanced across the whole scene.
+// =====================================================================
+const COIN_MAX = 96;
+const coinGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.016, 14);
+const coinMeshes = {};
+for (const kind of ['silver', 'gold', 'copper']) {
+  const mat = new THREE.MeshStandardMaterial({ color: COIN_COLORS[kind], roughness: 0.35, metalness: 0.5 });
+  const mesh = new THREE.InstancedMesh(coinGeo, mat, COIN_MAX);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.count = 0;
+  worldGroup.add(mesh);
+  coinMeshes[kind] = mesh;
+}
+
+function rebuildAllCoins(pileList) {
+  const counters = { silver: 0, gold: 0, copper: 0 };
+  for (const pile of pileList) {
+    const coinCount = Math.min(8, Math.max(2, Math.round(pile.amount / 80)));
+    for (let i = 0; i < coinCount; i++) {
+      const denom = COIN_DENOMS[i % COIN_DENOMS.length];
+      const kind = coinMaterialKind(denom);
+      const idx = counters[kind]++;
+      if (idx >= COIN_MAX) continue;
+      const angle = (i / coinCount) * Math.PI * 2 + pile.seed;
+      const r = 0.14 + pseudoRandom(pile.seed + i) * 0.05;
+      dummy.position.set(
+        pile.group.position.x + pile.coinAnchorX + Math.cos(angle) * r,
+        0.009 + Math.floor(i / 4) * 0.017,
+        pile.group.position.z + pile.coinAnchorZ + Math.sin(angle) * r
+      );
+      dummy.rotation.set(0, pseudoRandom(pile.seed + i + 3) * Math.PI, 0);
+      dummy.scale.set(1, 1, 1);
+      dummy.updateMatrix();
+      coinMeshes[kind].setMatrixAt(idx, dummy.matrix);
+    }
+  }
+  for (const kind of ['silver', 'gold', 'copper']) {
+    coinMeshes[kind].count = counters[kind];
+    coinMeshes[kind].instanceMatrix.needsUpdate = true;
+  }
+}
+
+// =====================================================================
+// SIGNS
+// =====================================================================
+function makeSign(title, subtitle, small) {
+  const group = new THREE.Group();
+  const scale = small ? 0.8 : 1;
+
+  const postGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.22 * scale, 8);
+  const postMat = new THREE.MeshStandardMaterial({ color: PALETTE.sign, roughness: 0.8 });
+  const post = new THREE.Mesh(postGeo, postMat);
+  post.position.y = 0.11 * scale;
+  post.castShadow = true;
+  group.add(post);
+
+  const plaqueGeo = new THREE.PlaneGeometry(0.34 * scale, 0.17 * scale);
+  const tex = makeSignTexture(title, subtitle);
+  const plaqueMat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.6 });
+  const plaque = new THREE.Mesh(plaqueGeo, plaqueMat);
+  plaque.position.y = 0.24 * scale;
+  plaque.castShadow = true;
+  group.add(plaque);
+
+  group.userData.updateText = (t, s) => {
+    plaqueMat.map = makeSignTexture(t, s);
+    plaqueMat.needsUpdate = true;
+  };
+
+  return group;
+}
+
+// =====================================================================
+// DISTRICT PILES
+// =====================================================================
+let piles = [];
+let vault = null;
+
+function buildCity(districts) {
+  for (const p of piles) worldGroup.remove(p.group);
+  piles = [];
+
+  const count = districts.length;
+  districts.forEach((d, i) => {
+    const angle = (i / count) * Math.PI * 2;
+    const radiusJitter = 1 + (pseudoRandom(i * 3.1) - 0.5) * 0.12;
+    const radius = 3.7 * radiusJitter;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+
+    const group = new THREE.Group();
+    group.position.set(x, 0, z);
+    group.lookAt(0, 0, 0);
+
+    const { mesh: patchMesh, topMat } = makePatch(1.05, 0.22, PALETTE.patchHealthy, i * 7.3);
+    patchMesh.position.y = -0.05;
+    group.add(patchMesh);
+
+    const pileAnchor = new THREE.Group();
+    pileAnchor.position.y = 0.06;
+    group.add(pileAnchor);
+    const pile = buildMoneyPile(pileAnchor, i * 11.7);
+
+    const sign = makeSign(d.label, '€0', true);
+    sign.position.set(-0.55, 0.06, 0.35);
+    sign.rotation.y = 0.4;
+    group.add(sign);
+
+    worldGroup.add(group);
+
+    piles.push({
+      districtId: d.id,
+      group, patchMesh, topMat, pile, sign,
+      seed: i * 11.7,
+      coinAnchorX: 0.32, coinAnchorZ: 0.05,
+      amount: d.monthlyBudget || 0,
+      healthPct: 100,
+      label: d.label,
+    });
+  });
+
+  buildVault();
+  refreshAllPiles(false);
+}
+
+function buildVault() {
+  if (vault) worldGroup.remove(vault.group);
+
+  const group = new THREE.Group();
+  group.position.set(0, 0, 0);
+
+  const { mesh: patchMesh } = makePatch(1.5, 0.24, PALETTE.patchHealthy, 500);
+  patchMesh.position.y = -0.05;
+  group.add(patchMesh);
+
+  const pileAnchor = new THREE.Group();
+  pileAnchor.position.y = 0.07;
+  group.add(pileAnchor);
+  const pile = buildMoneyPile(pileAnchor, 500);
+  pile.brick.scale.set(1.6, pile.brick.scale.y, 1.6);
+
+  const sign = makeSign('AVAILABLE', '€0', false);
+  sign.position.set(0, 0.07, 0.75);
+  group.add(sign);
+
+  worldGroup.add(group);
+  vault = { group, pile, sign, coinAnchorX: 0, coinAnchorZ: 0.4, seed: 500, amount: 0 };
+}
+
+function healthColor(healthPct) {
+  const healthy = new THREE.Color(PALETTE.patchHealthy);
+  const dry = new THREE.Color(PALETTE.patchDry);
+  const depleted = new THREE.Color(PALETTE.patchDepleted);
+  if (healthPct >= 60) {
+    const t = 1 - Math.min(1, (healthPct - 60) / 40);
+    return healthy.clone().lerp(dry, t * 0.25);
+  }
+  const t = Math.max(0, Math.min(1, (60 - healthPct) / 60));
+  return dry.clone().lerp(depleted, t);
+}
+
+function applyHealth(states) {
+  for (const p of piles) {
+    const s = states.find((x) => x.districtId === p.districtId);
+    if (!s) continue;
+    p.healthPct = s.healthPct;
+    p.amount = s.budget;
+    p.topMat.color.copy(healthColor(s.healthPct));
+  }
+  refreshAllPiles(true);
+}
+
+function refreshAllPiles(animate) {
+  for (const p of piles) {
+    updateMoneyPile(p.pile, p.amount, animate);
+    p.sign.userData.updateText(p.label, '€' + Math.round(p.amount));
+  }
+  if (vault) {
+    updateMoneyPile(vault.pile, vault.amount, animate);
+    vault.sign.userData.updateText('AVAILABLE', '€' + Math.round(vault.amount));
+  }
+  rebuildAllCoins([...piles, vault].filter(Boolean));
+}
+
+// =====================================================================
+// TRANSACTION ANIMATIONS — real money moves instead of particle bursts.
+// =====================================================================
+function flyNote(fromWorldPos, toWorldPos, denom, onLand) {
+  const tex = getNoteTexture(denom);
+  const geo = new THREE.BoxGeometry(0.4, 0.01, 0.2);
+  const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.55 });
+  const note = new THREE.Mesh(geo, mat);
+  note.position.copy(fromWorldPos);
+  note.castShadow = true;
+  scene.add(note);
+
+  const midPoint = fromWorldPos.clone().lerp(toWorldPos, 0.5);
+  midPoint.y += 1.4;
+
+  if (!window.gsap) {
+    note.position.copy(toWorldPos);
+    scene.remove(note);
+    onLand && onLand();
+    return;
+  }
+
+  const path = { t: 0 };
+  gsap.to(path, {
+    t: 1,
+    duration: 0.9,
+    ease: 'power1.inOut',
+    onUpdate: () => {
+      const t = path.t;
+      const a = fromWorldPos.clone().lerp(midPoint, t);
+      const b = midPoint.clone().lerp(toWorldPos, t);
+      note.position.copy(a.lerp(b, t));
+      note.rotation.y = t * Math.PI * 1.5;
+      note.rotation.x = Math.sin(t * Math.PI) * 0.3;
+    },
+    onComplete: () => {
+      scene.remove(note);
+      onLand && onLand();
+    },
+  });
+}
+
+function bumpPile(pile) {
+  if (!window.gsap) return;
+  gsap.fromTo(pile.pile.brick.scale, { x: 1.15, z: 1.15 }, { x: 1, z: 1, duration: 0.35, ease: 'elastic.out(1, 0.5)' });
+}
+
+function triggerSpend(districtId, amount) {
+  const p = piles.find((x) => x.districtId === districtId);
+  if (!p || !vault) return;
+  const fromPos = new THREE.Vector3();
+  vault.group.getWorldPosition(fromPos);
+  fromPos.y += 0.5;
+  const toPos = new THREE.Vector3();
+  p.group.getWorldPosition(toPos);
+  toPos.y += 0.3;
+
+  const denom = topDenomForAmount(amount || p.amount || 20);
+  flyNote(fromPos, toPos, denom, () => bumpPile(p));
+}
+
+function triggerSave(amount) {
+  if (!vault) return;
+  const fromPos = new THREE.Vector3(6, 3, -6);
+  const toPos = new THREE.Vector3();
+  vault.group.getWorldPosition(toPos);
+  toPos.y += 0.4;
+
+  const denom = topDenomForAmount(amount || 50);
+  flyNote(fromPos, toPos, denom, () => bumpPile(vault));
+}
+
+// =====================================================================
+// INTERACTION
+// =====================================================================
+let dragging = false;
+let lastX = 0, lastY = 0;
 renderer.domElement.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
 window.addEventListener('pointermove', (e) => {
   if (!dragging) return;
   const dx = e.clientX - lastX;
   lastX = e.clientX; lastY = e.clientY;
-  camAngle -= dx * 0.006; // yaw only — pitch stays locked at 45deg
+  camAngle -= dx * 0.006;
   updateCameraPosition();
-  requestRender();
 });
 window.addEventListener('pointerup', () => { dragging = false; });
 
@@ -533,37 +619,41 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(ndc, camera);
-  const hits = raycaster.intersectObjects(buildings.map((b) => b.body), false);
+  const hits = raycaster.intersectObjects(piles.map((p) => p.group), true);
   if (hits.length > 0) {
-    const districtId = hits[0].object.userData.districtId;
-    highlightBuilding(districtId);
-    postToReactNative({ type: 'districtPress', districtId });
+    let obj = hits[0].object;
+    while (obj.parent && !piles.some((p) => p.group === obj)) obj = obj.parent;
+    const pile = piles.find((p) => p.group === obj);
+    if (pile) {
+      selectPile(pile);
+      postToReactNative({ type: 'districtPress', districtId: pile.districtId });
+    }
   }
 });
 
-function highlightBuilding(districtId) {
-  const b = buildings.find((x) => x.districtId === districtId);
-  if (!b || !window.gsap) return;
-
-  gsap.to(b.body.scale, { x: 1.15, z: 1.15, duration: 0.12, ease: 'power2.out', yoyo: true, repeat: 1, onUpdate: requestRender, onComplete: () => b.body.scale.set(1, 1, 1) });
-
-  const mat = b.body.material;
-  const originalEmissive = mat.emissive.clone();
-  gsap.to(mat.emissive, {
-    r: 0.4, g: 0.32, b: 0.1, duration: 0.15, yoyo: true, repeat: 1, onUpdate: requestRender,
-    onComplete: () => mat.emissive.copy(originalEmissive),
-  });
+function selectPile(pile) {
+  if (!window.gsap) return;
+  gsap.to(pile.group.position, { y: 0.12, duration: 0.25, ease: 'power2.out', yoyo: true, repeat: 1 });
 }
 
 function postToReactNative(payload) {
   if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(payload));
 }
 
-window.terraSetDistricts = function (districtsJson) { buildCity(JSON.parse(districtsJson)); requestRender(); };
-window.terraSetHealth = function (statesJson) { applyHealth(JSON.parse(statesJson)); requestRender(); };
-window.terraSetBank = function (bankJson) { rebuildBank(JSON.parse(bankJson).floors); requestRender(); };
-window.terraTriggerSpend = function (districtId) { triggerSpend(districtId); requestRender(); };
-window.terraTriggerSave = function () { triggerSave(); requestRender(); };
+// =====================================================================
+// BRIDGE — signatures preserved exactly; amount is an optional extra
+// argument React Native may now pass for better animations.
+// =====================================================================
+window.terraSetDistricts = function (districtsJson) { buildCity(JSON.parse(districtsJson)); };
+window.terraSetHealth = function (statesJson) { applyHealth(JSON.parse(statesJson)); };
+window.terraSetBank = function (bankJson) {
+  const bank = JSON.parse(bankJson);
+  if (!vault) return;
+  vault.amount = bank.totalSaved || 0;
+  refreshAllPiles(true);
+};
+window.terraTriggerSpend = function (districtId, amount) { triggerSpend(districtId, amount); };
+window.terraTriggerSave = function (amount) { triggerSave(amount); };
 
 window.addEventListener('resize', () => {
   const newAspect = window.innerWidth / window.innerHeight;
@@ -573,86 +663,52 @@ window.addEventListener('resize', () => {
   camera.bottom = -ORTHO_VIEW_SIZE;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  requestRender();
 });
 
-const clock = new THREE.Clock();
-let ambientSparkleTimer = 0;
+// =====================================================================
+// RENDER LOOP — mostly still by design; no continuous bob/spin/particles.
+// =====================================================================
+let frameCount = 0;
+const frameCounterEl = document.getElementById('frameCounter');
 function animate() {
   requestAnimationFrame(animate);
-  const dt = Math.min(clock.getDelta(), 0.05);
-  const elapsed = clock.elapsedTime;
-
-  islandGroup.position.y = Math.sin(elapsed * 0.35) * 0.06;
-
-  let anyLerping = false;
-  let anyScaffoldVisible = false;
-  for (const b of buildings) {
-    if (Math.abs(b.targetScale - b.currentScale) > 0.001) anyLerping = true;
-    b.currentScale += (b.targetScale - b.currentScale) * Math.min(dt * 3, 1);
-    b.group.scale.set(1, b.currentScale, 1);
-    if (b.scaffold.visible) {
-      anyScaffoldVisible = true;
-      b.scaffold.rotation.y = Math.sin(elapsed * 3 + b.group.position.x) * 0.02;
-    }
-  }
-
-  for (const light of blinkingLights) {
-    const speed = light.subtle ? 1.5 : 3;
-    const intensity = light.subtle ? 0.3 : 0.6;
-    const s = 1 + Math.sin(elapsed * speed + light.phase) * intensity;
-    light.mesh.scale.set(s, s, s);
-  }
-
-  if (bankOrnament) bankOrnament.rotation.y = elapsed * 0.6;
-
-  ambientSparkleTimer += dt;
-  if (ambientSparkleTimer > 4) {
-    ambientSparkleTimer = 0;
-    const worldPos = new THREE.Vector3();
-    bankGroup.getWorldPosition(worldPos);
-    worldPos.y += 0.7;
-    burst(worldPos, COLORS.gold500, 4, 0.6);
-  }
-
-  // Health changes must keep animating smoothly until they settle, and a
-  // struggling district's scaffold wobble should stay visible — both are
-  // legitimate reasons to keep rendering, on top of drag/GSAP/state-push.
-  if (anyLerping || anyScaffoldVisible || dragging) requestRender();
-
-  if (needsRender) {
-    renderer.render(scene, camera);
-    needsRender = false;
-  }
+  frameCount++;
+  if (frameCounterEl && frameCount % 10 === 0) frameCounterEl.textContent = 'frame: ' + frameCount;
+  renderer.render(scene, camera);
 }
 animate();
 
 postToReactNative({ type: 'SCENE_READY' });
 
+// =====================================================================
+// STANDALONE DEMO MODE
+// =====================================================================
 if (!window.ReactNativeWebView) {
   const DEMO_DISTRICTS = [
-    { id: 'dining', label: 'Dining', icon: '🍜' },
-    { id: 'groceries', label: 'Groceries', icon: '🥬' },
-    { id: 'transport', label: 'Transport', icon: '🚇' },
-    { id: 'entertainment', label: 'Entertainment', icon: '🎭' },
-    { id: 'shopping', label: 'Shopping', icon: '🛍️' },
-    { id: 'subscriptions', label: 'Subscriptions', icon: '📡' },
-    { id: 'other', label: 'Other', icon: '🌾' },
+    { id: 'dining', label: 'Dining', monthlyBudget: 180 },
+    { id: 'groceries', label: 'Groceries', monthlyBudget: 420 },
+    { id: 'transport', label: 'Transport', monthlyBudget: 120 },
+    { id: 'entertainment', label: 'Entertainment', monthlyBudget: 55 },
+    { id: 'shopping', label: 'Shopping', monthlyBudget: 150 },
+    { id: 'subscriptions', label: 'Subscriptions', monthlyBudget: 60 },
+    { id: 'other', label: 'Savings', monthlyBudget: 1200 },
   ];
   const DEMO_HEALTH = [
-    { districtId: 'dining', healthPct: 78 },
-    { districtId: 'groceries', healthPct: 92 },
-    { districtId: 'transport', healthPct: 65 },
-    { districtId: 'entertainment', healthPct: 55 },
-    { districtId: 'shopping', healthPct: 18 },
-    { districtId: 'subscriptions', healthPct: 80 },
-    { districtId: 'other', healthPct: 70 },
+    { districtId: 'dining', healthPct: 78, budget: 180 },
+    { districtId: 'groceries', healthPct: 92, budget: 420 },
+    { districtId: 'transport', healthPct: 65, budget: 120 },
+    { districtId: 'entertainment', healthPct: 55, budget: 55 },
+    { districtId: 'shopping', healthPct: 18, budget: 150 },
+    { districtId: 'subscriptions', healthPct: 80, budget: 60 },
+    { districtId: 'other', healthPct: 70, budget: 1200 },
   ];
+
   buildCity(DEMO_DISTRICTS);
   applyHealth(DEMO_HEALTH);
-  rebuildBank(4);
-  setTimeout(() => triggerSave(), 2000);
-  setTimeout(() => triggerSpend('shopping'), 4000);
+  window.terraSetBank(JSON.stringify({ totalSaved: 2430, floors: 4 }));
+
+  setTimeout(() => triggerSpend('shopping', 47), 2200);
+  setTimeout(() => triggerSave(50), 4200);
 }
 </script>
 </body>

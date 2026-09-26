@@ -15,6 +15,7 @@
       "adaptiveIcon": { "backgroundColor": "#1B2E24" }
     },
     "plugins": ["expo-font"],
+    "web": { "bundler": "metro", "output": "single" },
     "extra": { "apiUrl": "http://localhost:4000" }
   }
 }

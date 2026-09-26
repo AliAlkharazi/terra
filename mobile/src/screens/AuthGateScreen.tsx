@@ -1,8 +1,9 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthStore } from '@/store/authStore';
+import { TapButton } from '@/components/TapButton';
 import { colors, radius, space, type } from '@/theme/tokens';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/types';
@@ -23,17 +24,17 @@ export function AuthGateScreen({ navigation }: Props) {
             and the bank grows a floor.
           </Text>
 
-          <Pressable style={styles.primaryButton} onPress={() => navigation.navigate('Login')}>
+          <TapButton style={styles.primaryButton} onPress={() => navigation.navigate('Login')}>
             <Text style={styles.primaryButtonText}>Log in</Text>
-          </Pressable>
+          </TapButton>
 
-          <Pressable style={styles.secondaryButton} onPress={() => navigation.navigate('Register')}>
+          <TapButton style={styles.secondaryButton} onPress={() => navigation.navigate('Register')}>
             <Text style={styles.secondaryButtonText}>Create an account</Text>
-          </Pressable>
+          </TapButton>
 
-          <Pressable style={styles.linkButton} onPress={continueOffline}>
+          <TapButton style={styles.linkButton} onPress={continueOffline}>
             <Text style={styles.linkText}>Continue without an account →</Text>
-          </Pressable>
+          </TapButton>
         </View>
       </SafeAreaView>
     </LinearGradient>

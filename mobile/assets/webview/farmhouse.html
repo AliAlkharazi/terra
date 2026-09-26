@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <style>
+    html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background: transparent; }
+    canvas { display: block; width: 100% !important; height: 100% !important; }
+  </style>
+</head>
+<body>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.166.1/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.166.1/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+const params = new URLSearchParams(location.search);
+const modelUrl = params.get('model') || '';
+const tintHex = params.get('tint') || '#6BA3C9';
+const overspent = params.get('overspent') === '1';
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(32, 1, 0.01, 100);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+renderer.setClearColor(0x000000, 0);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+document.body.appendChild(renderer.domElement);
+
+const hemi = new THREE.HemisphereLight(0xe8f4ff, 0x2a3a28, 1.1);
+scene.add(hemi);
+const key = new THREE.DirectionalLight(0xfff2d6, 1.35);
+key.position.set(3.2, 5.5, 2.4);
+scene.add(key);
+const fill = new THREE.DirectionalLight(0x6BA3C9, 0.45);
+fill.position.set(-2.5, 2.2, -1.5);
+scene.add(fill);
+
+function resize() {
+  const w = window.innerWidth || 1;
+  const h = window.innerHeight || 1;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  renderer.setSize(w, h, false);
+}
+window.addEventListener('resize', resize);
+resize();
+
+function parseColor(hex) {
+  try { return new THREE.Color(hex); } catch { return new THREE.Color('#6BA3C9'); }
+}
+
+function tintModel(root, tint, burnt) {
+  const target = burnt ? new THREE.Color('#D96C5F') : tint;
+  const strength = burnt ? 0.62 : 0.52;
+  root.traverse((obj) => {
+    if (!obj.isMesh) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    obj.material = mats.map((m) => {
+      const mat = m.clone();
+      if (mat.color) mat.color.lerp(target, strength);
+      if (mat.emissive) mat.emissive.lerp(target, burnt ? 0.12 : 0.04);
+      mat.needsUpdate = true;
+      return mat;
+    });
+    if (obj.material.length === 1) obj.material = obj.material[0];
+  });
+}
+
+function frameObject(root) {
+  const box = new THREE.Box3().setFromObject(root);
+  const size = box.getSize(new THREE.Vector3());
+  const center = box.getCenter(new THREE.Vector3());
+  root.position.sub(center);
+  root.position.y += size.y * 0.02;
+
+  const maxDim = Math.max(size.x, size.y, size.z) || 1;
+  const dist = maxDim * 1.55;
+  // Iso-ish look to sit with the SVG village
+  camera.position.set(dist * 0.95, dist * 0.72, dist * 1.05);
+  camera.lookAt(0, size.y * 0.05, 0);
+}
+
+let model = null;
+let spin = 0.18;
+
+function animate() {
+  requestAnimationFrame(animate);
+  if (model) model.rotation.y += 0.004 * spin;
+  renderer.render(scene, camera);
+}
+animate();
+
+function boot() {
+  if (!modelUrl) {
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: 'missing model url' }));
+    }
+    return;
+  }
+  const loader = new GLTFLoader();
+  loader.load(
+    decodeURIComponent(modelUrl),
+    (gltf) => {
+      model = gltf.scene;
+      tintModel(model, parseColor(tintHex), overspent);
+      frameObject(model);
+      scene.add(model);
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'ready' }));
+      }
+    },
+    undefined,
+    (err) => {
+      if (window.ReactNativeWebView) {
+        window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'error', message: String(err?.message || err) }));
+      }
+    }
+  );
+}
+
+boot();
+</script>
+</body>
+</html>

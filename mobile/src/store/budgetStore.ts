@@ -1,40 +1,67 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { BankState, District, DistrictId, Transaction, WorldSnapshot } from '@/types';
-import { buildBankState, buildWorldSnapshot } from '@/engine/worldEngine';
+import { Allocation, AllocationState, BankState, District, DistrictId, DistrictTarget, Transaction, ActivityItem, PocketId, MoneyLock } from '@/types';
+import {
+  computeAllocationStateChain,
+  cappedAssignAmount,
+  computeReadyToAssign,
+  emptyAllocationState,
+  readyToAssignToBankState,
+  shiftMonth,
+} from '@/engine/ynabEngine';
+import { lockedTotal, unlockAtFromDays } from '@/engine/locks';
+import { buildSampleHistory } from '@/data/sampleHistory';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
+import { rememberSpend } from '@/store/spendMemoryStore';
 
 export interface LastEvent {
-  kind: 'spend' | 'save';
+  kind: 'spend' | 'income';
   districtId?: DistrictId;
+  amount?: number;
   nonce: number;
 }
 
 interface BudgetState {
   districts: District[];
   transactions: Transaction[];
+  allocations: Allocation[];
   currentMonth: string;
   lastEvent: LastEvent | null;
+  lastBackupAt: string | null;
+  activity: ActivityItem[];
+  locks: MoneyLock[];
+  historySeeded: boolean;
 
-  addTransaction: (tx: Omit<Transaction, 'id' | 'kind'>) => void;
-  logSaving: (amount: number, note: string) => void;
+  seedHistory: () => void;
+  addTransaction: (tx: Omit<Transaction, 'id' | 'kind'> & { isCreditCard?: boolean }) => void;
+  logIncome: (amount: number, note: string) => void;
   removeTransaction: (id: string) => void;
   updateDistrictBudget: (id: DistrictId, monthlyBudget: number) => void;
+  setDistrictTarget: (id: DistrictId, target: DistrictTarget | undefined) => void;
+  assignToDistrict: (id: DistrictId, month: string, amount: number) => void;
+  addToDistrict: (id: DistrictId, month: string, delta: number) => void;
+  moveMoney: (from: PocketId, to: PocketId, amount: number, note?: string) => void;
+  coverOverspend: (fromDistrictId: DistrictId, toDistrictId: DistrictId, month: string, amount: number) => void;
+  lockMoney: (amount: number, days: number) => void;
   setMonth: (monthISO: string) => void;
-  getSnapshot: () => WorldSnapshot;
+
+  backupNow: () => Promise<{ success: boolean; error?: string }>;
+  restoreFromBackup: () => Promise<{ success: boolean; error?: string }>;
+
+  getReadyToAssign: () => number;
   getBankSnapshot: () => BankState;
+  getAllocationState: (districtId: DistrictId, month?: string) => AllocationState;
+  getAllAllocationStates: (month?: string) => AllocationState[];
 }
 
 const DEFAULT_DISTRICTS: District[] = [
-  { id: 'dining', label: 'Dining', icon: '🍜', monthlyBudget: 250 },
-  { id: 'groceries', label: 'Groceries', icon: '🥬', monthlyBudget: 350 },
-  { id: 'transport', label: 'Transport', icon: '🚇', monthlyBudget: 120 },
-  { id: 'entertainment', label: 'Entertainment', icon: '🎭', monthlyBudget: 100 },
-  { id: 'shopping', label: 'Shopping', icon: '🛍️', monthlyBudget: 150 },
-  { id: 'subscriptions', label: 'Subscriptions', icon: '📡', monthlyBudget: 60 },
-  { id: 'other', label: 'Other', icon: '🌾', monthlyBudget: 100 },
+  { id: 'dining', label: 'Diner', icon: '', monthlyBudget: 250 },
+  { id: 'property', label: 'Home', icon: '', monthlyBudget: 200 },
+  { id: 'bills', label: 'Bills', icon: '', monthlyBudget: 80 },
+  { id: 'transport', label: 'Travel', icon: '', monthlyBudget: 120 },
+  { id: 'groceries', label: 'Food', icon: '', monthlyBudget: 350 },
 ];
 
 function currentMonthISO(): string {
@@ -44,26 +71,10 @@ function currentMonthISO(): string {
 
 let eventCounter = 0;
 
-/** Best-effort push to the backend. Never blocks or throws into the UI —
- *  the app is local-first, so a failed sync just means "stays local". */
-function syncTransactionToBackend(districtId: DistrictId, amount: number, note: string, date: string) {
-  const auth = useAuthStore.getState();
-  if (auth.mode !== 'synced' || !auth.token) return;
-  const remoteId = auth.remoteDistrictIds[districtId];
-  if (!remoteId) return;
-
-  api.createTransaction(auth.token, { districtId: remoteId, amount, note, date }).catch(() => {
-    // silent — local state is already updated, this is just best-effort sync
-  });
-}
-
-function syncBudgetToBackend(districtId: DistrictId, monthlyBudget: number) {
-  const auth = useAuthStore.getState();
-  if (auth.mode !== 'synced' || !auth.token) return;
-  const remoteId = auth.remoteDistrictIds[districtId];
-  if (!remoteId) return;
-
-  api.updateDistrictBudget(auth.token, remoteId, monthlyBudget).catch(() => {});
+function earliestKnownMonth(transactions: Transaction[], allocations: Allocation[]): string {
+  const dates = [...transactions.map((t) => t.date.slice(0, 7)), ...allocations.map((a) => a.month)];
+  if (dates.length === 0) return currentMonthISO();
+  return dates.reduce((min, d) => (d < min ? d : min), dates[0]);
 }
 
 export const useBudgetStore = create<BudgetState>()(
@@ -71,70 +82,266 @@ export const useBudgetStore = create<BudgetState>()(
     (set, get) => ({
       districts: DEFAULT_DISTRICTS,
       transactions: [],
+      allocations: [],
       currentMonth: currentMonthISO(),
       lastEvent: null,
+      lastBackupAt: null,
+      activity: [],
+      locks: [],
+      historySeeded: false,
 
-      addTransaction: (tx) => {
-        set((state) => ({
-          transactions: [
-            ...state.transactions,
-            {
-              ...tx,
-              kind: 'spend',
-              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            },
-          ],
-          lastEvent: { kind: 'spend', districtId: tx.districtId, nonce: ++eventCounter },
-        }));
-        syncTransactionToBackend(tx.districtId, tx.amount, tx.note, tx.date);
+      seedHistory: () => {
+        const state = get();
+        if (state.historySeeded) return;
+        const history = buildSampleHistory(state.currentMonth, state.districts);
+        const months = new Set(history.allocations.map((a) => a.month));
+        if (state.transactions.some((t) => months.has(t.date.slice(0, 7)))) {
+          set({ historySeeded: true });
+          return;
+        }
+        set({
+          transactions: [...history.transactions, ...state.transactions],
+          allocations: [...history.allocations, ...state.allocations],
+          activity: [...(state.activity ?? []), ...history.activity].sort((a, b) => b.date.localeCompare(a.date)),
+          historySeeded: true,
+        });
       },
 
-      logSaving: (amount, note) => {
+      addTransaction: (tx) => {
+        const isCreditCard = tx.isCreditCard ?? false;
+        const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        set((state) => {
+          const newTx: Transaction = {
+            ...tx,
+            kind: 'spend',
+            isCreditCard,
+            id,
+          };
+
+          let allocations = state.allocations;
+          if (isCreditCard) {
+            const month = tx.date.slice(0, 7);
+            const existing = allocations.find((a) => a.districtId === 'credit_card_payment' && a.month === month);
+            allocations = existing
+              ? allocations.map((a) => (a === existing ? { ...a, amount: a.amount + tx.amount } : a))
+              : [...allocations, { districtId: 'credit_card_payment' as DistrictId, month, amount: tx.amount }];
+          }
+
+          return {
+            transactions: [...state.transactions, newTx],
+            allocations,
+            lastEvent: { kind: 'spend', districtId: tx.districtId, amount: tx.amount, nonce: ++eventCounter },
+          };
+        });
+        rememberSpend(tx.districtId, tx.amount, tx.note, tx.date, id);
+      },
+
+      logIncome: (amount, note) => {
         const date = new Date().toISOString();
         set((state) => ({
           transactions: [
             ...state.transactions,
-            {
-              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-              districtId: 'other',
-              amount,
-              note,
-              date,
-              kind: 'save',
-            },
+            { id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, districtId: 'dining', amount, note, date, kind: 'income' },
           ],
-          lastEvent: { kind: 'save', nonce: ++eventCounter },
+          lastEvent: { kind: 'income', amount, nonce: ++eventCounter },
+          activity: [
+            {
+              id: `${Date.now()}-dep`,
+              date,
+              kind: 'deposit',
+              amount,
+              toId: 'vault',
+              note: note.trim(),
+            },
+            ...(state.activity ?? []),
+          ],
         }));
-        syncTransactionToBackend('other', amount, note, date);
       },
 
       removeTransaction: (id) =>
-        set((state) => ({
-          transactions: state.transactions.filter((t) => t.id !== id),
-        })),
+        set((state) => ({ transactions: state.transactions.filter((t) => t.id !== id) })),
 
-      updateDistrictBudget: (id, monthlyBudget) => {
+      updateDistrictBudget: (id, monthlyBudget) =>
         set((state) => ({
           districts: state.districts.map((d) => (d.id === id ? { ...d, monthlyBudget } : d)),
+        })),
+
+      setDistrictTarget: (id, target) =>
+        set((state) => ({
+          districts: state.districts.map((d) => (d.id === id ? { ...d, target } : d)),
+        })),
+
+      assignToDistrict: (id, month, amount) =>
+        set((state) => {
+          const existing = state.allocations.find((a) => a.districtId === id && a.month === month);
+          const current = existing?.amount ?? 0;
+          const readyToAssign =
+            computeReadyToAssign(state.transactions, state.allocations) - lockedTotal(state.locks);
+          const nextAmount = cappedAssignAmount(amount, current, readyToAssign);
+          const allocations = existing
+            ? state.allocations.map((a) => (a === existing ? { ...a, amount: nextAmount } : a))
+            : [...state.allocations, { districtId: id, month, amount: nextAmount }];
+          return { allocations };
+        }),
+
+      addToDistrict: (id, month, delta) => {
+        const { allocations, assignToDistrict } = get();
+        const current = allocations.find((a) => a.districtId === id && a.month === month)?.amount ?? 0;
+        assignToDistrict(id, month, current + delta);
+      },
+
+      moveMoney: (from, to, amount, note = '') => {
+        if (from === to || amount <= 0) return;
+        const { currentMonth, addToDistrict } = get();
+        if (from === 'vault' && to !== 'vault') addToDistrict(to, currentMonth, amount);
+        else if (to === 'vault' && from !== 'vault') addToDistrict(from, currentMonth, -amount);
+        else if (from !== 'vault' && to !== 'vault') {
+          addToDistrict(from, currentMonth, -amount);
+          addToDistrict(to, currentMonth, amount);
+        }
+        set((state) => ({
+          activity: [
+            {
+              id: `${Date.now()}-mv`,
+              date: new Date().toISOString(),
+              kind: 'move',
+              amount,
+              fromId: from,
+              toId: to,
+              note: note.trim(),
+            },
+            ...(state.activity ?? []),
+          ],
         }));
-        syncBudgetToBackend(id, monthlyBudget);
+      },
+
+      coverOverspend: (fromDistrictId, toDistrictId, month, amount) => {
+        const { districts, allocations, transactions } = get();
+        const fromDistrict = districts.find((d) => d.id === fromDistrictId);
+        if (!fromDistrict) return;
+
+        const earliest = shiftMonth(earliestKnownMonth(transactions, allocations), -1);
+        const fromState = computeAllocationStateChain(fromDistrict, allocations, transactions, month, earliest);
+        const cappedAmount = Math.max(0, Math.min(amount, fromState.available));
+        if (cappedAmount <= 0) return;
+
+        set((state) => {
+          const bump = (id: DistrictId, delta: number) => {
+            const existing = state.allocations.find((a) => a.districtId === id && a.month === month);
+            if (existing) {
+              return state.allocations.map((a) => (a === existing ? { ...a, amount: a.amount + delta } : a));
+            }
+            return [...state.allocations, { districtId: id, month, amount: delta }];
+          };
+          const afterFrom = bump(fromDistrictId, -cappedAmount);
+          const existingTo = afterFrom.find((a) => a.districtId === toDistrictId && a.month === month);
+          const allocations = existingTo
+            ? afterFrom.map((a) => (a === existingTo ? { ...a, amount: a.amount + cappedAmount } : a))
+            : [...afterFrom, { districtId: toDistrictId, month, amount: cappedAmount }];
+          return { allocations };
+        });
       },
 
       setMonth: (monthISO) => set({ currentMonth: monthISO }),
 
-      getSnapshot: () => {
-        const { districts, transactions, currentMonth } = get();
-        return buildWorldSnapshot(districts, transactions, currentMonth);
+      lockMoney: (amount, days) => {
+        const vault = get().getReadyToAssign();
+        const capped = Math.round(Math.min(Math.max(0, amount), vault) * 100) / 100;
+        if (capped <= 0 || days < 1) return;
+        const createdAt = new Date().toISOString();
+        const lock: MoneyLock = {
+          id: `${Date.now()}-lock`,
+          amount: capped,
+          days: Math.round(days),
+          createdAt,
+          unlockAt: unlockAtFromDays(days),
+        };
+        set((state) => ({ locks: [lock, ...(state.locks ?? [])] }));
+      },
+
+      backupNow: async () => {
+        const auth = useAuthStore.getState();
+        if (auth.mode !== 'synced' || !auth.token) {
+          return { success: false, error: 'Log in to back up your data.' };
+        }
+        try {
+          const { districts, transactions, allocations, currentMonth, locks } = get();
+          await api.putBackup(auth.token, { districts, transactions, allocations, currentMonth, locks });
+          set({ lastBackupAt: new Date().toISOString() });
+          return { success: true };
+        } catch (e) {
+          return { success: false, error: e instanceof Error ? e.message : 'Backup failed.' };
+        }
+      },
+
+      restoreFromBackup: async () => {
+        const auth = useAuthStore.getState();
+        if (auth.mode !== 'synced' || !auth.token) {
+          return { success: false, error: 'Log in to restore your data.' };
+        }
+        try {
+          const result = await api.getBackup(auth.token);
+          const data = result.data as {
+            districts?: District[];
+            transactions?: Transaction[];
+            allocations?: Allocation[];
+            currentMonth?: string;
+            locks?: MoneyLock[];
+          };
+          set({
+            districts: data.districts ?? DEFAULT_DISTRICTS,
+            transactions: data.transactions ?? [],
+            allocations: data.allocations ?? [],
+            currentMonth: data.currentMonth ?? currentMonthISO(),
+            locks: data.locks ?? [],
+            lastBackupAt: result.updatedAt,
+          });
+          return { success: true };
+        } catch (e) {
+          return { success: false, error: e instanceof Error ? e.message : 'No backup found.' };
+        }
+      },
+
+      getReadyToAssign: () => {
+        const { transactions, allocations, locks } = get();
+        return computeReadyToAssign(transactions, allocations) - lockedTotal(locks);
       },
 
       getBankSnapshot: () => {
-        const { transactions, currentMonth } = get();
-        return buildBankState(transactions, currentMonth);
+        return readyToAssignToBankState(get().getReadyToAssign());
+      },
+
+      getAllocationState: (districtId, month) => {
+        const { districts, allocations, transactions, currentMonth } = get();
+        const targetMonth = month ?? currentMonth;
+        const district = districts.find((d) => d.id === districtId);
+        if (!district) return emptyAllocationState(districtId);
+        const earliest = shiftMonth(earliestKnownMonth(transactions, allocations), -1);
+        return computeAllocationStateChain(district, allocations, transactions, targetMonth, earliest);
+      },
+
+      getAllAllocationStates: (month) => {
+        const { districts, allocations, transactions, currentMonth } = get();
+        const targetMonth = month ?? currentMonth;
+        const earliest = shiftMonth(earliestKnownMonth(transactions, allocations), -1);
+        return districts
+          .filter((d) => !d.isCreditCard)
+          .map((d) => computeAllocationStateChain(d, allocations, transactions, targetMonth, earliest));
       },
     }),
     {
-      name: 'terra-budget-storage-v2',
+      name: 'terra-budget-storage-v5',
       storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        districts: state.districts,
+        transactions: state.transactions,
+        allocations: state.allocations,
+        currentMonth: state.currentMonth,
+        lastBackupAt: state.lastBackupAt,
+        activity: state.activity,
+        locks: state.locks,
+        historySeeded: state.historySeeded,
+      }),
     }
   )
 );
