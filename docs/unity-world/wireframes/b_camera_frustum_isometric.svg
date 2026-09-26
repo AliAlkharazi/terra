@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="800" viewBox="0 0 1100 800">
+  <rect width="1100" height="800" fill="#0f1419"/>
+  <text x="40" y="50" fill="#e0fbfc" font-family="DejaVu Sans, sans-serif" font-size="26" font-weight="bold">Camera &amp; Projection Notes (CoC-inspired → Terra)</text>
+  <polygon points="550,360 830,520 550,680 270,520" fill="#2d6a4f" stroke="#95d5b2" stroke-width="2"/>
+  <text x="500" y="515" fill="#d8f3dc" font-family="DejaVu Sans, sans-serif" font-size="12">Ground grid ~4:3 tiles</text>
+  <circle cx="200" cy="120" r="18" fill="#4cc9f0" stroke="white" stroke-width="2"/>
+  <text x="170" y="90" fill="#4cc9f0" font-family="DejaVu Sans, sans-serif" font-size="16">Camera</text>
+  <line x1="200" y1="120" x2="350" y2="480" stroke="#4cc9f0" stroke-width="2"/>
+  <line x1="200" y1="120" x2="750" y2="480" stroke="#4cc9f0" stroke-width="2"/>
+  <text x="320" y="220" fill="#f72585" font-family="DejaVu Sans, sans-serif" font-size="18" font-weight="bold">Pitch ≈ 47.5° down</text>
+  <rect x="40" y="580" width="1020" height="180" fill="#1b263b" stroke="#415a77"/>
+  <text x="55" y="610" fill="#e0e1dd" font-family="DejaVu Sans, sans-serif" font-size="13">• Axonometric / dimetric-oblique (not true 2:1 iso). Orthographic preferred.</text>
+  <text x="55" y="640" fill="#e0e1dd" font-family="DejaVu Sans, sans-serif" font-size="13">• Optional mild perspective FOV 25–35°. Yaw fixed; pan XY; zoom = ortho size.</text>
+  <text x="55" y="670" fill="#e0e1dd" font-family="DejaVu Sans, sans-serif" font-size="13">• High angle reduces occlusion for district tap targets (Supercell: playability first).</text>
+  <text x="55" y="700" fill="#e0e1dd" font-family="DejaVu Sans, sans-serif" font-size="13">• Tile increments ~32×24 or 64×48 (4:3) if using sprite/grid placement.</text>
+  <text x="55" y="730" fill="#e0e1dd" font-family="DejaVu Sans, sans-serif" font-size="13">• Terra: no combat camera shake; calm presentation pan/zoom only.</text>
+</svg>

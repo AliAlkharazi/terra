@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="720" viewBox="0 0 1100 720">
+  <rect width="1100" height="720" fill="#111827"/>
+  <text x="40" y="50" fill="#f9fafb" font-family="DejaVu Sans, sans-serif" font-size="26" font-weight="bold">Building LOD Distances — Far / Mid / Near</text>
+  <circle cx="110" cy="350" r="30" fill="#38bdf8"/>
+  <text x="90" y="300" fill="#38bdf8" font-family="DejaVu Sans, sans-serif" font-size="16">Cam</text>
+  <rect x="180" y="160" width="200" height="400" fill="#065f46" stroke="#10b981" stroke-width="3"/>
+  <text x="200" y="210" fill="#10b981" font-family="DejaVu Sans, sans-serif" font-size="28" font-weight="bold">NEAR</text>
+  <text x="200" y="260" fill="#e5e7eb" font-family="DejaVu Sans, sans-serif" font-size="14">Full mesh + idle anims</text>
+  <text x="200" y="290" fill="#e5e7eb" font-family="DejaVu Sans, sans-serif" font-size="14">VFX + workers + birds</text>
+  <text x="200" y="320" fill="#e5e7eb" font-family="DejaVu Sans, sans-serif" font-size="14">Readable labels</text>
+  <rect x="400" y="160" width="220" height="400" fill="#1e3a5f" stroke="#3b82f6" stroke-width="3"/>
+  <text x="420" y="210" fill="#3b82f6" font-family="DejaVu Sans, sans-serif" font-size="28" font-weight="bold">MID</text>
+  <text x="420" y="260" fill="#e5e7eb" font-family="DejaVu Sans, sans-serif" font-size="14">Simplified mesh/atlas</text>
+  <text x="420" y="290" fill="#e5e7eb" font-family="DejaVu Sans, sans-serif" font-size="14">Reduced anim rate</text>
+  <text x="420" y="320" fill="#e5e7eb" font-family="DejaVu Sans, sans-serif" font-size="14">Icon badges only</text>
+  <rect x="640" y="160" width="260" height="400" fill="#3b0764" stroke="#a855f7" stroke-width="3"/>
+  <text x="660" y="210" fill="#a855f7" font-family="DejaVu Sans, sans-serif" font-size="28" font-weight="bold">FAR</text>
+  <text x="660" y="260" fill="#e5e7eb" font-family="DejaVu Sans, sans-serif" font-size="14">Billboard / low-poly</text>
+  <text x="660" y="290" fill="#e5e7eb" font-family="DejaVu Sans, sans-serif" font-size="14">Static silhouette</text>
+  <text x="660" y="320" fill="#e5e7eb" font-family="DejaVu Sans, sans-serif" font-size="14">District color tint</text>
+  <text x="40" y="640" fill="#9ca3af" font-family="DejaVu Sans, sans-serif" font-size="13">Hysteresis on zoom to avoid LOD pop. Tune distances in Unity spike.</text>
+</svg>
