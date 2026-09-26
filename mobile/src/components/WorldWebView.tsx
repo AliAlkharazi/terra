@@ -13,6 +13,10 @@ interface Props {
 }
 
 /**
+ * Interim bridge into the Three.js WebView picture.
+ * Not the long-term World: CoC-quality rendering lives in /unity.
+ * See docs/UNITY_WORLD.md.
+ *
  * Bridges React Native state into the Three.js WebView city scene.
  *
  * Readiness handling: the scene posts { type: 'SCENE_READY' } once its

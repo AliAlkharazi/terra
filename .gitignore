@@ -6,3 +6,17 @@ dist/
 .DS_Store
 ios/
 android/
+
+# Unity Editor output. The scene and scripts under unity/Assets stay tracked.
+unity/[Ll]ibrary/
+unity/[Tt]emp/
+unity/[Oo]bj/
+unity/[Bb]uild/
+unity/[Bb]uilds/
+unity/[Ll]ogs/
+unity/[Uu]serSettings/
+unity/[Mm]emoryCaptures/
+unity/[Rr]ecordings/
+unity/*.csproj
+unity/*.sln
+unity/.vs/
