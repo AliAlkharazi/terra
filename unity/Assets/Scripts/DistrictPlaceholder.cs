@@ -32,7 +32,8 @@ public class DistrictPlaceholder : MonoBehaviour
             if (found != null) labelMesh = found.GetComponent<TextMesh>();
         }
 
-        if (!isBudgetHall && string.IsNullOrEmpty(districtKey) && gameObject.name == "BudgetHall")
+        if (!isBudgetHall && string.IsNullOrEmpty(districtKey)
+            && (gameObject.name == "Budget Hall" || gameObject.name == "BudgetHall"))
             isBudgetHall = true;
 
         if (padTop <= 0f)
@@ -65,10 +66,10 @@ public class DistrictPlaceholder : MonoBehaviour
             labelMesh.transform.localPosition = new Vector3(0f, padTop + height + 0.4f, 0f);
 
         var renderer = body.GetComponent<Renderer>();
-        if (renderer == null) return;
+        if (renderer == null || renderer.sharedMaterial == null) return;
         var unhealthy = new Color(0.72f, 0.28f, 0.24f);
         var healthy = new Color(0.42f, 0.66f, 0.34f);
-        renderer.material.color = Color.Lerp(unhealthy, healthy, Mathf.Clamp01(healthPct / 100f));
+        renderer.sharedMaterial.color = Color.Lerp(unhealthy, healthy, Mathf.Clamp01(healthPct / 100f));
     }
 
     void LateUpdate()

@@ -24,10 +24,10 @@ public static class TerraDistrictCatalog
     public const float DistrictFootprint = 1.65f;
     public const float DistrictPad = 3.05f;
     public const float DistrictPadThickness = 0.16f;
-    public const float HallFootprint = 2.45f;
-    public const float HallPad = 4.7f;
-    public const float HallPadThickness = 0.18f;
-    public const float HallHeight = 3.15f;
+    public const float HallFootprint = 2.7f;
+    public const float HallPad = 5.2f;
+    public const float HallPadThickness = 0.2f;
+    public const float HallHeight = 3.6f;
 
     public static readonly Seed BudgetHall = new Seed
     {

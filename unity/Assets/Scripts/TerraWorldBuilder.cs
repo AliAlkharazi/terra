@@ -51,13 +51,13 @@ public static class TerraWorldBuilder
         var ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
         ground.name = "Ground";
         ground.transform.SetParent(parent, false);
-        ground.transform.localScale = new Vector3(7f, 1f, 7f);
+        ground.transform.localScale = new Vector3(14f, 1f, 14f);
         Paint(ground.GetComponent<Renderer>(), TerraDistrictCatalog.GrassColor);
     }
 
     static void CreateCamera(Transform parent)
     {
-        var go = new GameObject("World Camera");
+        var go = new GameObject("Camera");
         go.tag = "MainCamera";
         go.transform.SetParent(parent, false);
         var cam = go.AddComponent<Camera>();
@@ -80,9 +80,8 @@ public static class TerraWorldBuilder
         foreach (var cam in cameras)
         {
             if (cam == keep) continue;
-            cam.enabled = false;
-            var listener = cam.GetComponent<AudioListener>();
-            if (listener != null) listener.enabled = false;
+            if ((cam.gameObject.hideFlags & HideFlags.HideInHierarchy) != 0) continue;
+            cam.gameObject.SetActive(false);
         }
     }
 
@@ -90,16 +89,16 @@ public static class TerraWorldBuilder
     {
         var paths = new GameObject("Paths");
         paths.transform.SetParent(parent, false);
-        float hallClear = TerraDistrictCatalog.HallPad * 0.5f + 0.2f;
-        float plotClear = TerraDistrictCatalog.DistrictPad * 0.5f + 0.15f;
-        bool lines = FindPathShader() != null;
-        if (!lines)
-            Debug.LogWarning("[Terra] No unlit path shader found. Paths are flat cubes.");
+        float hallClear = TerraDistrictCatalog.HallPad * 0.5f + 0.25f;
+        float plotClear = TerraDistrictCatalog.DistrictPad * 0.5f + 0.2f;
+        var lineShader = FindPathShader();
+        if (lineShader == null)
+            Debug.LogWarning("[Terra] No unlit path shader. Paths are ground strips.");
         foreach (var seed in TerraDistrictCatalog.Seeds)
-            CreatePath(paths.transform, TerraDistrictCatalog.BudgetHall.Position, seed.Position, hallClear, plotClear, seed.Key, lines);
+            CreatePath(paths.transform, TerraDistrictCatalog.BudgetHall.Position, seed.Position, hallClear, plotClear, seed.Key, lineShader);
     }
 
-    static void CreatePath(Transform parent, Vector3 from, Vector3 to, float fromClear, float toClear, string key, bool asLine)
+    static void CreatePath(Transform parent, Vector3 from, Vector3 to, float fromClear, float toClear, string key, Shader lineShader)
     {
         Vector3 delta = to - from;
         delta.y = 0f;
@@ -108,18 +107,16 @@ public static class TerraWorldBuilder
         Vector3 dir = delta / length;
         Vector3 a = from + dir * fromClear;
         Vector3 b = to - dir * toClear;
-        a.y = 0.12f;
-        b.y = 0.12f;
-
-        if (asLine)
-            CreatePathLine(parent, a, b, key);
-        else
-            CreatePathDecal(parent, a, b, key);
+        CreatePathDecal(parent, a, b, key);
+        if (lineShader != null)
+            CreatePathLine(parent, a, b, key, lineShader);
     }
 
-    static void CreatePathLine(Transform parent, Vector3 a, Vector3 b, string key)
+    static void CreatePathLine(Transform parent, Vector3 a, Vector3 b, string key, Shader shader)
     {
-        var go = new GameObject("Path_" + key);
+        a.y = 0.16f;
+        b.y = 0.16f;
+        var go = new GameObject("PathLine_" + key);
         go.transform.SetParent(parent, false);
         go.transform.rotation = Quaternion.LookRotation(Vector3.up, Vector3.forward);
         var line = go.AddComponent<LineRenderer>();
@@ -138,14 +135,13 @@ public static class TerraWorldBuilder
         var color = TerraDistrictCatalog.PathColor;
         line.startColor = color;
         line.endColor = color;
-        var shader = FindPathShader();
         if (shader == null) return;
         var mat = new Material(shader);
         if (mat.HasProperty("_Color")) mat.color = color;
         if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
         if (mat.HasProperty("_MainTex") && mat.mainTexture == null)
             mat.mainTexture = Texture2D.whiteTexture;
-        line.material = mat;
+        line.sharedMaterial = mat;
     }
 
     static void CreatePathDecal(Transform parent, Vector3 a, Vector3 b, string key)
@@ -153,12 +149,14 @@ public static class TerraWorldBuilder
         Vector3 delta = b - a;
         float length = delta.magnitude;
         if (length < 0.05f) return;
+        a.y = 0.05f;
+        b.y = 0.05f;
         var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
         go.name = "Path_" + key;
         go.transform.SetParent(parent, false);
         go.transform.localPosition = (a + b) * 0.5f;
         go.transform.localRotation = Quaternion.LookRotation(delta.normalized, Vector3.up);
-        go.transform.localScale = new Vector3(0.72f, 0.08f, length);
+        go.transform.localScale = new Vector3(1.15f, 0.08f, length);
         Paint(go.GetComponent<Renderer>(), TerraDistrictCatalog.PathColor);
         var collider = go.GetComponent<Collider>();
         if (collider == null) return;
@@ -186,8 +184,7 @@ public static class TerraWorldBuilder
 
     static void CreatePlot(Transform parent, TerraDistrictCatalog.Seed seed, float height, float footprint, float padSize, float padThickness)
     {
-        string name = seed.IsBudgetHall ? "BudgetHall" : "District_" + seed.Key;
-        var go = new GameObject(name);
+        var go = new GameObject(seed.Label);
         go.transform.SetParent(parent, false);
         go.transform.position = seed.Position;
 
@@ -208,14 +205,18 @@ public static class TerraWorldBuilder
         body.transform.localPosition = new Vector3(0f, padThickness + height * 0.5f, 0f);
         Paint(body.GetComponent<Renderer>(), accent);
 
+        float labelY = padThickness + height + 0.45f;
+        if (seed.IsBudgetHall)
+            labelY = AddCupola(go.transform, footprint, padThickness, height) + 0.4f;
+
         var labelGo = new GameObject("Label");
         labelGo.transform.SetParent(go.transform, false);
-        labelGo.transform.localPosition = new Vector3(0f, padThickness + height + 0.4f, 0f);
+        labelGo.transform.localPosition = new Vector3(0f, labelY, 0f);
         var text = labelGo.AddComponent<TextMesh>();
         text.text = seed.Label;
         text.anchor = TextAnchor.LowerCenter;
         text.alignment = TextAlignment.Center;
-        text.characterSize = 0.13f;
+        text.characterSize = 0.42f;
         text.fontSize = 64;
         text.color = new Color(0.97f, 0.96f, 0.93f);
         var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
@@ -225,10 +226,28 @@ public static class TerraWorldBuilder
         placeholder.Bind(seed.Key, seed.Label, body.transform, text, seed.IsBudgetHall, padThickness);
     }
 
+    static float AddCupola(Transform parent, float footprint, float padThickness, float height)
+    {
+        const float roofHeight = 0.85f;
+        var roof = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
+        roof.name = "Cupola";
+        roof.transform.SetParent(parent, false);
+        roof.transform.localScale = new Vector3(footprint * 0.82f, roofHeight * 0.5f, footprint * 0.82f);
+        roof.transform.localPosition = new Vector3(0f, padThickness + height + roofHeight * 0.5f, 0f);
+        Paint(roof.GetComponent<Renderer>(), TerraDistrictCatalog.Srgb(0xF6E2B8));
+        return padThickness + height + roofHeight;
+    }
+
     static void Paint(Renderer renderer, Color color)
     {
         if (renderer == null) return;
-        renderer.material.color = color;
+        var source = renderer.sharedMaterial;
+        var shader = source != null ? source.shader : Shader.Find("Standard");
+        if (shader == null) return;
+        var mat = new Material(shader);
+        if (mat.HasProperty("_Color")) mat.color = color;
+        if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", color);
+        renderer.sharedMaterial = mat;
     }
 
     static Color Darken(Color color, float factor)

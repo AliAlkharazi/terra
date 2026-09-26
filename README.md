@@ -52,14 +52,17 @@ Checked on the machine that added this scaffold: no Unity Editor and no Unity Hu
 
 Press **Play**. Click the Game view first so the mouse controls land there.
 
-You should see a grass field, a central coral **Budget Hall**, and seven district plots — Dining, Groceries, Transport, Entertainment, Shopping, Subscriptions, and Other — in the accent colors from the visual plan, with a sand-colored path from the hall to each plot. The camera is orthographic, pitched **47.5°** down, with yaw fixed at 45°. The first Console line reports that measured pitch.
+You should see a grass field filling the frame, a central **Budget Hall** (taller block with a light roof), and seven labeled district plots — Dining, Groceries, Transport, Entertainment, Shopping, Subscriptions, and Other — in the accent colors from the visual plan, with a sand-colored path from the hall to each plot. The Hierarchy names are **Camera**, **Budget Hall**, and those seven districts. The camera is orthographic, pitched **47.5°** down, with yaw fixed at 45°. The first frame is the full town. The first Console line reports the measured pitch.
+
+Checklist: [docs/unity-world/SPIKE_AB_PLAYMODE_AC.md](docs/unity-world/SPIKE_AB_PLAYMODE_AC.md).
 
 - Left-drag (or one finger): pan. The view stays on the town.
-- Scroll wheel (or pinch): zoom. Pinch and scroll stop between a neighborhood view (about three districts) and the full town.
-- Double-click (or double-tap) a plot: the camera eases in on that plot, closer than the pinch limit.
-- Click (or tap) a district: the Console logs `districtPress` and the category key (`dining`, `groceries`, `transport`, `entertainment`, `shopping`, `subscriptions`, `other`). Budget Hall logs that it has no category key.
+- Scroll wheel (or pinch): zoom. It stops at a neighborhood view (about three districts) and at the full town. It does not open onto empty sky or pass through the ground.
+- Double-click (or double-tap) a plot, or press **F** with the cursor on a plot: the camera eases in on that plot.
+- Click (or tap) a district: the Console logs `districtPress` and the category key (`dining`, `groceries`, `transport`, `entertainment`, `shopping`, `subscriptions`, `other`).
+- Click Budget Hall: the Console logs `budget_hall`.
 
-There is no right-drag orbit. Yaw does not move.
+Yaw does not change while you pan or zoom.
 
 While playing, **Terra → Send Sample Districts** posts the sample JSON into the scene. Building height still follows `monthlyBudget`, and the cube tint follows `healthPct`. The colored pad under each district keeps its accent. That JSON is the same shape the phone builds. The keys are category keys, not Prisma ids.
 

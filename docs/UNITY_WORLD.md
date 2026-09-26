@@ -87,13 +87,15 @@ A common embed package is `@azesmway/react-native-unity`. This repo does not dep
 
 This is Spike A and Spike B from `docs/unity-world/TERRA_UNITY_WORLD_VISUAL_PLAN.md` §11. Spikes C–F are not built.
 
-- Orthographic camera. Pitch is **47.5°** down from horizontal (Console logs the measured angle on Play). Yaw is **45°** and fixed.
-- Left-drag or one finger pans, clamped to the town. Scroll or pinch zooms between a neighborhood size (about three districts) and the full map. Double-click or double-tap eases the camera onto that plot, closer than the pinch floor.
-- **Budget Hall** sits in the center. The seven districts sit on the wireframe A plan: Other north, Dining and Groceries on the north corners, Transport and Entertainment on the sides, Shopping and Subscriptions on the south corners. Each plot is a colored cube on a pad. Accent hex values are visual plan §3.1. Paths are line renderers in `#C2B280`.
-- A click or tap logs `districtPress` plus the category key (`dining`, `groceries`, …). That is `District.key`, not Prisma `District.id`.
+- Orthographic camera. Pitch is **47.5°** down from horizontal (Console logs the measured angle on Play). Yaw is **45°** and fixed while you pan or zoom.
+- Left-drag or one finger pans, clamped to the town. Scroll or pinch zooms between a neighborhood size (about three districts) and the full map, which is the size Play starts at, so Budget Hall and all seven plots fit in one frame. Double-click, double-tap, or the **F** key eases the camera onto the plot under the cursor.
+- **Budget Hall** sits in the center, with a light cupola so it reads as the hub. The seven districts sit on the wireframe A plan: Other north, Dining and Groceries on the north corners, Transport and Entertainment on the sides, Shopping and Subscriptions on the south corners. Hierarchy names match those labels. Each plot is a colored cube on a pad. Accent hex values are visual plan §3.1. Paths are ground strips plus line renderers in `#C2B280`.
+- A click or tap logs `districtPress` plus the category key (`dining`, `groceries`, …). That is `District.key`, not Prisma `District.id`. A click on Budget Hall logs `budget_hall`.
 - Height still follows `monthlyBudget`. **Terra → Send Sample Districts** recolors the cube by `healthPct`. The pad keeps the district accent.
 
-The scene is the ground, eight building cubes, pads, and seven paths. That is the Spike A content budget (empty scene plus about eight cubes).
+Play-mode checklist: `docs/unity-world/SPIKE_AB_PLAYMODE_AC.md`.
+
+The scene is the ground, the hall, seven district cubes, pads, and seven paths. That is the Spike A content budget (empty scene plus about eight cubes).
 
 ## Explicitly out of scope
 

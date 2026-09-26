@@ -13,8 +13,8 @@ public class TerraOrbitCamera : MonoBehaviour
     public const float YawDegrees = 45f;
     public const float FocusOrtho = 3.4f;
     public const float NeighborhoodOrtho = 6f;
-    public const float OverviewOrtho = 13f;
-    public const float DefaultOrtho = 11f;
+    public const float OverviewOrtho = 21f;
+    public const float DefaultOrtho = 21f;
 
     public float distance = 42f;
     public float orthoSize = DefaultOrtho;
@@ -23,9 +23,9 @@ public class TerraOrbitCamera : MonoBehaviour
     const float DragThreshold = 8f;
     const float DoubleTapSeconds = 0.4f;
     const float DoubleTapSlop = 48f;
-    const float FocusSeconds = 0.55f;
-    const float PanLimitFocused = 11f;
-    const float PanLimitOverview = 2.5f;
+    const float FocusSeconds = 0.7f;
+    const float PanLimitFocused = 12f;
+    const float PanLimitOverview = 6f;
 
     TerraBridge bridge;
     float dragPixels;
@@ -58,6 +58,9 @@ public class TerraOrbitCamera : MonoBehaviour
 
     void Update()
     {
+        if (Input.GetKeyDown(KeyCode.F))
+            FocusUnderCursor();
+
         if (Input.touchCount >= 2)
         {
             PinchZoom();
@@ -111,11 +114,11 @@ public class TerraOrbitCamera : MonoBehaviour
         string pitchText = depression.ToString("0.0", CultureInfo.InvariantCulture);
         string yawText = yaw.ToString("0.0", CultureInfo.InvariantCulture);
         string message = "[Terra] Camera pitch " + pitchText + "° (target 47.5), yaw " + yawText
-            + "° fixed. Pinch or scroll stays between neighborhood "
+            + "° fixed. Scroll or pinch clamps between neighborhood "
             + NeighborhoodOrtho.ToString("0.0", CultureInfo.InvariantCulture)
             + " and overview "
             + OverviewOrtho.ToString("0.0", CultureInfo.InvariantCulture)
-            + ". Double-tap focuses a plot. Tap a district to log its category key.";
+            + ". Double-tap or F focuses the plot under the cursor. Tap a district to log its category key. Tap Budget Hall to log budget_hall.";
         if (Mathf.Abs(depression - PitchDegrees) > 2f)
             Debug.LogWarning(message);
         else
@@ -237,12 +240,18 @@ public class TerraOrbitCamera : MonoBehaviour
 
         if (plot.IsBudgetHall)
         {
-            Debug.Log("[Terra] Budget Hall has no category key.");
+            Debug.Log("[TerraBridge] budget_hall");
             return;
         }
 
         if (plot.LogsCategory && bridge != null)
             bridge.NotifyDistrictPressed(plot.districtKey);
+    }
+
+    void FocusUnderCursor()
+    {
+        if (!TryPick(Input.mousePosition, out DistrictPlaceholder plot)) return;
+        BeginFocus(plot.FocusPoint);
     }
 
     void BeginFocus(Vector3 worldPoint)
