@@ -2,16 +2,18 @@ import React from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import Svg, { Ellipse, Path } from 'react-native-svg';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
-import { District, DistrictState } from '@/types';
+import { forecastChipLabel, formatEuroFromCents, isVisibleForecast } from '@/forecast/display';
+import { District, DistrictForecast, DistrictState } from '@/types';
 import { colors, radius, space, type, healthColor } from '@/theme/tokens';
 
 interface Props {
   district: District;
   state: DistrictState;
+  forecast: DistrictForecast | null;
   onPress: () => void;
 }
 
-export function DistrictTile({ district, state, onPress }: Props) {
+export function DistrictTile({ district, state, forecast, onPress }: Props) {
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   const handlePressIn = () => { scale.value = withSpring(0.95); };
@@ -32,6 +34,15 @@ export function DistrictTile({ district, state, onPress }: Props) {
         <Text style={styles.icon}>{district.icon}</Text>
         <Text style={styles.label}>{district.label}</Text>
         <Text style={[styles.pct, { color }]}>{health}%</Text>
+        {isVisibleForecast(forecast) ? (
+          <Text
+            style={styles.estimate}
+            numberOfLines={1}
+            accessibilityLabel={`Next-month estimate ${formatEuroFromCents(forecast.predictedNextMonthCents)}`}
+          >
+            {forecastChipLabel(forecast.predictedNextMonthCents)}
+          </Text>
+        ) : null}
       </Animated.View>
     </Pressable>
   );
@@ -53,4 +64,5 @@ const styles = StyleSheet.create({
   icon: { fontSize: 18, marginTop: -8 },
   label: { fontFamily: type.body, fontSize: type.size.xs, color: colors.textOnMoss, marginTop: 2 },
   pct: { fontFamily: type.bodyBold, fontSize: type.size.xs, marginTop: 2 },
+  estimate: { width: '100%', fontFamily: type.body, fontSize: type.size.xs, color: colors.sage300, marginTop: 2, textAlign: 'center' },
 });

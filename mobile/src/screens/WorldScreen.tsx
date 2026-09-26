@@ -1,6 +1,7 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useFocusEffect } from '@react-navigation/native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { useAuthStore } from '@/store/authStore';
@@ -29,11 +30,20 @@ export function WorldScreen({ navigation }: Props) {
   const transactions = useBudgetStore((s) => s.transactions);
   const mode = useAuthStore((s) => s.mode);
   const email = useAuthStore((s) => s.email);
+  const token = useAuthStore((s) => s.token);
+  const forecasts = useAuthStore((s) => s.forecasts);
+  const refreshForecasts = useAuthStore((s) => s.refreshForecasts);
   const logout = useAuthStore((s) => s.logout);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [is3DAvailable, setIs3DAvailable] = useState(true);
   const [wants3D, setWants3D] = useState(true);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (mode === 'synced' && token) refreshForecasts();
+    }, [mode, token, refreshForecasts])
+  );
 
   const snapshot = useMemo(() => getSnapshot(), [getSnapshot, districts, transactions]);
   const bankSnapshot = useMemo(() => getBankSnapshot(), [getBankSnapshot, transactions]);
@@ -81,6 +91,7 @@ export function WorldScreen({ navigation }: Props) {
                 <DistrictTile
                   district={district}
                   state={item}
+                  forecast={mode === 'synced' ? (forecasts[item.districtId] ?? null) : null}
                   onPress={() => navigation.navigate('DistrictDetail', { districtId: item.districtId })}
                 />
               );

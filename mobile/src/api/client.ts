@@ -1,3 +1,5 @@
+import type { DistrictForecast } from '@/types';
+
 /**
  * Thin fetch client for the Terra backend (see /backend).
  *
@@ -15,6 +17,12 @@ export interface ApiDistrict {
   label: string;
   icon: string;
   monthlyBudget: number;
+  /**
+   * Additive on `GET /districts`: an estimate, or null when that district has
+   * no complete-month history. Omitted on routes that do not compute one (PATCH).
+   * Prefer this list field over `GET /districts/:id/forecast`.
+   */
+  forecast?: DistrictForecast | null;
 }
 
 export interface AuthResponse {
