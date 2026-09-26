@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../prisma';
 import { AuthedRequest, requireAuth } from '../middleware/auth';
-import { withDistrictForecasts } from '../forecast';
+import { forecastDistrictSpend, withDistrictForecasts } from '../forecast';
 
 export const districtsRouter = Router();
 districtsRouter.use(requireAuth);
@@ -16,8 +16,21 @@ districtsRouter.get('/', async (req: AuthedRequest, res) => {
       select: { districtId: true, amount: true, date: true },
     }),
   ]);
-  // Additive: each district gains `forecast` (object, or null when N = 0).
+  // Additive. `forecast` is an object, or null when that district has N = 0.
   res.json(withDistrictForecasts(districts, transactions));
+});
+
+districtsRouter.get('/:id/forecast', async (req: AuthedRequest, res) => {
+  const district = await prisma.district.findFirst({
+    where: { id: req.params.id, userId: req.userId },
+  });
+  if (!district) return res.status(404).json({ error: 'District not found' });
+
+  const transactions = await prisma.transaction.findMany({
+    where: { userId: req.userId, districtId: district.id },
+    select: { amount: true, date: true },
+  });
+  res.json(forecastDistrictSpend(district.id, transactions));
 });
 
 const updateBudgetSchema = z.object({ monthlyBudget: z.number().nonnegative() });

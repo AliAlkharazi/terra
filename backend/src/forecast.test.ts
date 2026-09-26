@@ -1,218 +1,278 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import {
-  dollarsToCents,
-  forecastDistrictSpend,
-  monthKeyUTC,
-  withDistrictForecasts,
-  type SpendPoint,
-} from './forecast';
+import { dollarsToCents, forecastDistrictSpend, withDistrictForecasts, type DistrictForecast, type SpendPoint } from './forecast';
 
-const NOW = new Date('2026-09-26T15:00:00.000Z');
+/** September 2026 is the incomplete current month for every fixture. */
+const AS_OF = new Date('2026-09-26T15:00:00.000Z');
+const DISTRICT_ID = 'b7e1c2a0-4f3d-4a1e-9c2b-1a2b3c4d5e6f';
 
-function point(amount: number, iso: string): SpendPoint {
-  return { amount, date: new Date(iso) };
+interface FixtureTx {
+  amount: number;
+  date: string;
 }
 
-function utc(year: number, month: number, day = 15): string {
-  return new Date(Date.UTC(year, month - 1, day)).toISOString();
+const ONLY_CURRENT_MONTH: FixtureTx[] = [{ amount: 80, date: '2026-09-10T12:00:00.000Z' }];
+
+const ONLY_FUTURE_MONTH: FixtureTx[] = [{ amount: 80, date: '2026-11-02T12:00:00.000Z' }];
+
+/** One complete month, two spends. 10.10 + 10.20 dollars = 2030 cents. */
+const N1: FixtureTx[] = [
+  { amount: 10.1, date: '2026-08-02T12:00:00.000Z' },
+  { amount: 10.2, date: '2026-08-20T12:00:00.000Z' },
+];
+
+/** July $10 + August $30 = 1000 and 3000 cents. Mean 2000. */
+const N2: FixtureTx[] = [
+  { amount: 10, date: '2026-07-15T12:00:00.000Z' },
+  { amount: 30, date: '2026-08-15T12:00:00.000Z' },
+];
+
+/**
+ * May is complete but outside the window.
+ * Last three: June $20, July $30, August $40 → 2000, 3000, 4000 cents. Mean 3000.
+ */
+const N4: FixtureTx[] = [
+  { amount: 10, date: '2026-05-15T12:00:00.000Z' },
+  { amount: 20, date: '2026-06-15T12:00:00.000Z' },
+  { amount: 30, date: '2026-07-15T12:00:00.000Z' },
+  { amount: 40, date: '2026-08-15T12:00:00.000Z' },
+];
+
+/** 100, 200, 300 cents. Mean 200. Sample σ = 100. */
+const N3_BAND: FixtureTx[] = [
+  { amount: 1, date: '2026-06-15T12:00:00.000Z' },
+  { amount: 2, date: '2026-07-15T12:00:00.000Z' },
+  { amount: 3, date: '2026-08-15T12:00:00.000Z' },
+];
+
+/** Five complete months of $10 each. Horizon stays 3; older months stay out of the mean. */
+const N5: FixtureTx[] = [
+  { amount: 10, date: '2026-04-15T12:00:00.000Z' },
+  { amount: 10, date: '2026-05-15T12:00:00.000Z' },
+  { amount: 20, date: '2026-06-15T12:00:00.000Z' },
+  { amount: 30, date: '2026-07-15T12:00:00.000Z' },
+  { amount: 40, date: '2026-08-15T12:00:00.000Z' },
+];
+
+function spend(fixtures: FixtureTx[]): SpendPoint[] {
+  return fixtures.map((tx) => ({ amount: tx.amount, date: new Date(tx.date) }));
 }
 
-/** Consecutive complete months ending August 2026. totals[0] is the oldest. Amounts are dollars. */
-function history(totals: number[]): SpendPoint[] {
-  const last = { year: 2026, month: 8 };
-  return totals.map((amount, index) => {
-    const offset = totals.length - 1 - index;
-    const date = new Date(Date.UTC(last.year, last.month - 1 - offset, 15));
-    return { amount, date };
-  });
+function forecast(fixtures: FixtureTx[], districtId = DISTRICT_ID): DistrictForecast | null {
+  return forecastDistrictSpend(districtId, spend(fixtures), AS_OF);
+}
+
+function assertIntegerCents(value: number) {
+  assert.equal(Number.isInteger(value), true);
 }
 
 describe('dollarsToCents', () => {
-  it('rounds two-decimal dollar floats that are not exact in binary', () => {
+  it('recovers cents from two-decimal dollar floats', () => {
     assert.equal(dollarsToCents(19.99), 1999);
     assert.equal(dollarsToCents(1.15), 115);
     assert.equal(dollarsToCents(10.2), 1020);
     assert.equal(dollarsToCents(0.29), 29);
     assert.equal(dollarsToCents(0.1 + 0.2), 30);
-    assert.equal(dollarsToCents(250), 25000);
     assert.equal(dollarsToCents(0), 0);
-  });
-
-  it('rounds half away from zero for negative amounts', () => {
     assert.equal(dollarsToCents(-12.34), -1234);
-    assert.equal(dollarsToCents(-0.01), -1);
-  });
-
-  it('rejects non-finite amounts', () => {
-    assert.throws(() => dollarsToCents(Number.NaN), /non-finite/);
-    assert.throws(() => dollarsToCents(Number.POSITIVE_INFINITY), /non-finite/);
   });
 });
 
-describe('month buckets', () => {
-  it('labels months in UTC', () => {
-    assert.equal(monthKeyUTC(new Date('2026-09-01T00:00:00.000Z')), '2026-09');
-    assert.equal(monthKeyUTC(new Date('2026-08-31T23:59:59.999Z')), '2026-08');
+describe('F1 N=0 omits the forecast', () => {
+  it('returns null when there are no transactions', () => {
+    assert.equal(forecast([]), null);
   });
 
-  it('drops the current UTC month and anything later', () => {
-    const forecast = forecastDistrictSpend(
-      [
-        point(10, '2026-08-31T23:59:59.999Z'),
-        point(50, '2026-09-01T00:00:00.000Z'),
-        point(80, '2026-10-04T00:00:00.000Z'),
-      ],
-      NOW,
-    );
-    assert.ok(forecast);
-    assert.equal(forecast.predictedNextMonthCents, 1000);
-    assert.deepEqual(forecast.basedOnMonths, { months: ['2026-08'], k: 1, n: 1 });
-    assert.equal(forecast.horizonMonths, 1);
-    assert.equal('lowCents' in forecast, false);
-    assert.equal('highCents' in forecast, false);
+  it('returns null when the only spend is in the incomplete current month', () => {
+    assert.equal(forecast(ONLY_CURRENT_MONTH), null);
   });
 
-  it('sums every transaction in a complete month in cents', () => {
-    const forecast = forecastDistrictSpend(
-      [point(10.1, utc(2026, 8, 2)), point(10.2, utc(2026, 8, 20))],
-      NOW,
-    );
-    assert.equal(forecast?.predictedNextMonthCents, 2030);
-  });
-
-  it('does not zero-fill months that have no transactions', () => {
-    const forecast = forecastDistrictSpend(
-      [point(1, utc(2026, 1)), point(3, utc(2026, 3)), point(6, utc(2026, 6))],
-      NOW,
-    );
-    assert.ok(forecast);
-    assert.equal(forecast.basedOnMonths.n, 3);
-    assert.deepEqual(forecast.basedOnMonths.months, ['2026-01', '2026-03', '2026-06']);
-    assert.equal(forecast.predictedNextMonthCents, 333);
-  });
-
-  it('counts a complete month whose amounts net to zero', () => {
-    const forecast = forecastDistrictSpend(
-      [point(10, utc(2026, 7)), point(5, utc(2026, 8, 1)), point(-5, utc(2026, 8, 20))],
-      NOW,
-    );
-    assert.ok(forecast);
-    assert.deepEqual(forecast.basedOnMonths, { months: ['2026-07', '2026-08'], k: 2, n: 2 });
-    assert.equal(forecast.predictedNextMonthCents, 500);
+  it('returns null when the only spend is in a future month', () => {
+    assert.equal(forecast(ONLY_FUTURE_MONTH), null);
   });
 });
 
-describe('forecastDistrictSpend', () => {
-  it('returns null when no complete month has data', () => {
-    assert.equal(forecastDistrictSpend([], NOW), null);
-    assert.equal(forecastDistrictSpend([point(40, utc(2026, 9))], NOW), null);
-    assert.equal(forecastDistrictSpend([point(40, utc(2026, 11))], NOW), null);
-  });
-
-  it('averages the only complete month when N is 1', () => {
-    const forecast = forecastDistrictSpend([point(42.5, utc(2026, 4))], NOW);
-    assert.deepEqual(forecast, {
-      predictedNextMonthCents: 4250,
+describe('F2 N=1 uses that month', () => {
+  it('sets horizon 1, basedOnMonths 1, and the month total in cents', () => {
+    const result = forecast(N1);
+    assert.deepEqual(result, {
+      districtId: DISTRICT_ID,
+      predictedNextMonthCents: 2030,
       horizonMonths: 1,
-      basedOnMonths: { months: ['2026-04'], k: 1, n: 1 },
+      basedOnMonths: 1,
     });
+    assertIntegerCents(result!.predictedNextMonthCents);
+  });
+});
+
+describe('F3 N=2 averages both complete months', () => {
+  it('sets horizon 2 and basedOnMonths 2', () => {
+    const result = forecast(N2);
+    assert.ok(result);
+    assert.equal(result.horizonMonths, 2);
+    assert.equal(result.basedOnMonths, 2);
+    assert.equal(result.predictedNextMonthCents, 2000);
+    assert.equal(result.districtId, DISTRICT_ID);
+    assertIntegerCents(result.predictedNextMonthCents);
+    const json = JSON.parse(JSON.stringify(result)) as Record<string, unknown>;
+    assert.equal(Object.hasOwn(json, 'bandLowCents'), false);
+    assert.equal(Object.hasOwn(json, 'bandHighCents'), false);
   });
 
-  it('rounds the mean half away from zero', () => {
-    const up = forecastDistrictSpend([point(0.01, utc(2026, 7)), point(0.02, utc(2026, 8))], NOW);
-    const down = forecastDistrictSpend([point(-0.01, utc(2026, 7)), point(-0.02, utc(2026, 8))], NOW);
+  it('rounds a .5 mean half-up toward +∞', () => {
+    const up = forecast([
+      { amount: 0.01, date: '2026-07-15T12:00:00.000Z' },
+      { amount: 0.02, date: '2026-08-15T12:00:00.000Z' },
+    ]);
+    const down = forecast([
+      { amount: -0.01, date: '2026-07-15T12:00:00.000Z' },
+      { amount: -0.02, date: '2026-08-15T12:00:00.000Z' },
+    ]);
+    // +1.5 → 2. −1.5 → −1 (toward +∞). Half away from zero would make the negative case −2.
     assert.equal(up?.predictedNextMonthCents, 2);
-    assert.equal(down?.predictedNextMonthCents, -2);
-    assert.equal(forecastDistrictSpend(history([1, 1, 1.01]), NOW)?.predictedNextMonthCents, 100);
-    assert.equal(forecastDistrictSpend(history([1, 1, 1.02]), NOW)?.predictedNextMonthCents, 101);
+    assert.equal(down?.predictedNextMonthCents, -1);
+    assert.equal(up?.horizonMonths, 2);
+    assert.equal(up?.basedOnMonths, 2);
+  });
+});
+
+describe('F4 N>=3 averages the last 3 complete months', () => {
+  it('uses horizon 3 and ignores complete months older than the window', () => {
+    const result = forecast(N4);
+    assert.ok(result);
+    assert.equal(result.horizonMonths, 3);
+    assert.equal(result.basedOnMonths, 3);
+    assert.equal(result.predictedNextMonthCents, 3000);
+    assert.equal(result.districtId, DISTRICT_ID);
+    assertIntegerCents(result.predictedNextMonthCents);
   });
 
-  it('uses only the last k = min(3, N) complete months', () => {
-    const forecast = forecastDistrictSpend(history([1, 1, 1, 4]), NOW);
-    assert.ok(forecast);
-    assert.equal(forecast.basedOnMonths.n, 4);
-    assert.equal(forecast.basedOnMonths.k, 3);
-    assert.equal(forecast.predictedNextMonthCents, 200);
-    assert.deepEqual(forecast.basedOnMonths.months, ['2026-06', '2026-07', '2026-08']);
+  it('keeps horizon 3 when N is greater than 3', () => {
+    const result = forecast(N5);
+    assert.ok(result);
+    assert.equal(result.horizonMonths, 3);
+    assert.equal(result.basedOnMonths, 3);
+    assert.equal(result.predictedNextMonthCents, 3000);
   });
 
-  it('sets horizon from N, not from k', () => {
-    assert.equal(forecastDistrictSpend(history([1]), NOW)?.horizonMonths, 1);
-    assert.equal(forecastDistrictSpend(history([1, 2]), NOW)?.horizonMonths, 1);
-    assert.equal(forecastDistrictSpend(history([1, 2, 3]), NOW)?.horizonMonths, 2);
-    assert.equal(forecastDistrictSpend(history([1, 2, 3, 4, 5]), NOW)?.horizonMonths, 2);
-    assert.equal(forecastDistrictSpend(history([1, 2, 3, 4, 5, 6]), NOW)?.horizonMonths, 3);
-    assert.equal(forecastDistrictSpend(history([1, 2, 3, 4, 5, 6, 7, 8]), NOW)?.horizonMonths, 3);
+  it('does not treat gap months as zero-spend months', () => {
+    // Jan, Mar, Jun, Aug. Last 3 totals are 300, 600, and 900 cents (mean 600).
+    // Zero-filling July would pull the mean down to 500.
+    const result = forecast([
+      { amount: 1, date: '2026-01-15T12:00:00.000Z' },
+      { amount: 3, date: '2026-03-15T12:00:00.000Z' },
+      { amount: 6, date: '2026-06-15T12:00:00.000Z' },
+      { amount: 9, date: '2026-08-15T12:00:00.000Z' },
+    ]);
+    assert.equal(result?.horizonMonths, 3);
+    assert.equal(result?.basedOnMonths, 3);
+    assert.equal(result?.predictedNextMonthCents, 600);
+  });
+});
+
+describe('F5 incomplete current month does not change the prediction', () => {
+  it('ignores spend on the first instant of the current month and later', () => {
+    const closed = forecast([{ amount: 25, date: '2026-08-31T23:59:59.999Z' }]);
+    const withOpenMonth = forecast([
+      { amount: 25, date: '2026-08-31T23:59:59.999Z' },
+      { amount: 400, date: '2026-09-01T00:00:00.000Z' },
+      { amount: 900, date: '2026-09-26T15:00:00.000Z' },
+    ]);
+    assert.deepEqual(withOpenMonth, closed);
+    assert.equal(closed?.predictedNextMonthCents, 2500);
   });
 
-  it('omits the band until N is at least 3', () => {
-    const forecast = forecastDistrictSpend(history([4, 9]), NOW);
-    assert.ok(forecast);
-    const json = JSON.parse(JSON.stringify(forecast)) as Record<string, unknown>;
-    assert.equal(json.horizonMonths, 1);
-    assert.equal(Object.hasOwn(json, 'lowCents'), false);
-    assert.equal(Object.hasOwn(json, 'highCents'), false);
+  it('keeps the N>=3 window stable when the current month is the largest', () => {
+    const before = forecast(N4);
+    const after = forecast([...N4, { amount: 500, date: '2026-09-12T12:00:00.000Z' }]);
+    assert.deepEqual(after, before);
+    assert.equal(after?.predictedNextMonthCents, 3000);
+  });
+});
+
+describe('F6 band brackets the prediction only when N>=3', () => {
+  it('omits band keys when N is 1 or 2', () => {
+    for (const fixtures of [N1, N2]) {
+      const json = JSON.parse(JSON.stringify(forecast(fixtures))) as Record<string, unknown>;
+      assert.equal(Object.hasOwn(json, 'bandLowCents'), false);
+      assert.equal(Object.hasOwn(json, 'bandHighCents'), false);
+    }
   });
 
-  it('uses the sample standard deviation of the 3-month window', () => {
-    // 100, 200, 300 cents. Mean 200. Sum of squared deviations 20000.
-    // Sample variance 20000 / 2 = 10000, sample sd 100.
-    // Population sd would be sqrt(20000 / 3) ≈ 81.65, which must not be used.
-    const forecast = forecastDistrictSpend(history([1, 2, 3]), NOW);
-    assert.ok(forecast);
-    assert.equal(forecast.horizonMonths, 2);
-    assert.equal(forecast.predictedNextMonthCents, 200);
-    assert.equal(forecast.lowCents, 100);
-    assert.equal(forecast.highCents, 300);
-    assert.equal(forecast.basedOnMonths.k, 3);
-    assert.equal(forecast.basedOnMonths.n, 3);
+  it('sets mean ± sample σ for the last three months and brackets the prediction', () => {
+    const result = forecast(N3_BAND);
+    assert.ok(result);
+    assert.equal(result.horizonMonths, 3);
+    assert.equal(result.basedOnMonths, 3);
+    assert.equal(result.predictedNextMonthCents, 200);
+    // Squared deviations 10000 + 0 + 10000, sample variance 10000, σ = 100.
+    // Population σ would be ~81.65 and must not be used.
+    assert.equal(result.bandLowCents, 100);
+    assert.equal(result.bandHighCents, 300);
+    assert.ok(result.bandLowCents <= result.predictedNextMonthCents);
+    assert.ok(result.predictedNextMonthCents <= result.bandHighCents);
+    assertIntegerCents(result.bandLowCents);
+    assertIntegerCents(result.bandHighCents);
   });
 
-  it('bands the last three months once N is at least 6', () => {
-    const forecast = forecastDistrictSpend(history([1, 2, 3, 4, 5, 6]), NOW);
-    assert.ok(forecast);
-    assert.equal(forecast.horizonMonths, 3);
-    assert.deepEqual(forecast.basedOnMonths.months, ['2026-06', '2026-07', '2026-08']);
-    assert.equal(forecast.predictedNextMonthCents, 500);
-    assert.equal(forecast.lowCents, 400);
-    assert.equal(forecast.highCents, 600);
+  it('bands the same last-three window when N is greater than 3', () => {
+    const result = forecast(N4);
+    assert.ok(result);
+    assert.equal(result.bandLowCents, 2000);
+    assert.equal(result.predictedNextMonthCents, 3000);
+    assert.equal(result.bandHighCents, 4000);
+    assert.ok(result.bandLowCents <= result.predictedNextMonthCents);
+    assert.ok(result.predictedNextMonthCents <= result.bandHighCents);
   });
 
-  it('collapses the band when the window does not vary', () => {
-    const forecast = forecastDistrictSpend(history([5, 5, 5]), NOW);
-    assert.equal(forecast?.lowCents, 500);
-    assert.equal(forecast?.highCents, 500);
-    assert.equal(forecast?.predictedNextMonthCents, 500);
+  it('collapses the band when the three months are equal', () => {
+    const result = forecast([
+      { amount: 5, date: '2026-06-15T12:00:00.000Z' },
+      { amount: 5, date: '2026-07-15T12:00:00.000Z' },
+      { amount: 5, date: '2026-08-15T12:00:00.000Z' },
+    ]);
+    assert.equal(result?.predictedNextMonthCents, 500);
+    assert.equal(result?.bandLowCents, 500);
+    assert.equal(result?.bandHighCents, 500);
   });
+});
 
-  it('ignores an incomplete current month even when it is the largest', () => {
-    const without = forecastDistrictSpend(history([4, 5, 6]), NOW);
-    const withCurrent = forecastDistrictSpend([...history([4, 5, 6]), point(500, utc(2026, 9))], NOW);
-    assert.deepEqual(withCurrent, without);
+describe('months that count toward N', () => {
+  it('counts a complete month whose spend nets to zero', () => {
+    const result = forecast([
+      { amount: 10, date: '2026-07-15T12:00:00.000Z' },
+      { amount: 5, date: '2026-08-01T12:00:00.000Z' },
+      { amount: -5, date: '2026-08-20T12:00:00.000Z' },
+    ]);
+    assert.equal(result?.horizonMonths, 2);
+    assert.equal(result?.basedOnMonths, 2);
+    assert.equal(result?.predictedNextMonthCents, 500);
   });
 });
 
 describe('withDistrictForecasts', () => {
-  it('attaches null when a district has no complete months and does not mix districts', () => {
-    const districts = [
-      { id: 'dining', key: 'dining', monthlyBudget: 250 },
-      { id: 'transit', key: 'transport', monthlyBudget: 120 },
-    ];
+  it('embeds null or a forecast per district without mixing transactions', () => {
+    const dining = '11111111-1111-4111-8111-111111111111';
+    const groceries = '22222222-2222-4222-8222-222222222222';
     const rows = withDistrictForecasts(
-      districts,
       [
-        { districtId: 'dining', amount: 12, date: new Date(utc(2026, 8)) },
-        { districtId: 'dining', amount: 18, date: new Date(utc(2026, 7)) },
-        { districtId: 'transit', amount: 99, date: new Date(utc(2026, 9)) },
+        { id: dining, key: 'dining', monthlyBudget: 250 },
+        { id: groceries, key: 'groceries', monthlyBudget: 350 },
       ],
-      NOW,
+      [
+        { districtId: dining, amount: 10, date: new Date('2026-07-15T12:00:00.000Z') },
+        { districtId: dining, amount: 30, date: new Date('2026-08-15T12:00:00.000Z') },
+        { districtId: groceries, amount: 99, date: new Date('2026-09-02T12:00:00.000Z') },
+      ],
+      AS_OF,
     );
 
     assert.equal(rows[0].key, 'dining');
     assert.equal(rows[0].monthlyBudget, 250);
-    assert.equal(rows[0].forecast?.predictedNextMonthCents, 1500);
-    assert.equal(rows[0].forecast?.horizonMonths, 1);
+    assert.equal(rows[0].forecast?.districtId, dining);
+    assert.equal(rows[0].forecast?.predictedNextMonthCents, 2000);
+    assert.equal(rows[0].forecast?.horizonMonths, 2);
+    assert.equal(rows[0].forecast?.basedOnMonths, 2);
     assert.equal(rows[1].forecast, null);
     assert.equal(JSON.parse(JSON.stringify(rows[1])).forecast, null);
   });
