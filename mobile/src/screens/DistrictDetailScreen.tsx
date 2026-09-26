@@ -1,6 +1,9 @@
 import React, { useMemo } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ForecastEstimate } from '@/components/ForecastEstimate';
+import { isVisibleForecast } from '@/forecast/display';
+import { useAuthStore } from '@/store/authStore';
 import { useBudgetStore } from '@/store/budgetStore';
 import { colors, radius, space, type, healthColor } from '@/theme/tokens';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -23,6 +26,7 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
   const getSnapshot = useBudgetStore((s) => s.getSnapshot);
 
   const district = districts.find((d) => d.id === districtId)!;
+  const forecast = useAuthStore((s) => (s.mode === 'synced' ? (s.forecasts[districtId] ?? null) : null));
   const snapshot = useMemo(() => getSnapshot(), [getSnapshot]);
   const state = snapshot.districts.find((d) => d.districtId === districtId)!;
 
@@ -45,6 +49,7 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
         <Text style={[styles.health, { color }]}>{state.healthPct}% healthy · {state.stage}</Text>
         <Text style={styles.copy}>{STAGE_COPY[state.stage]}</Text>
         <Text style={styles.amounts}>${state.spent.toFixed(2)} spent of ${state.budget.toFixed(2)} budget</Text>
+        {isVisibleForecast(forecast) ? <ForecastEstimate forecast={forecast} /> : null}
       </View>
 
       <FlatList
