@@ -20,4 +20,6 @@ export type RootStackParamList = {
   Afford: undefined;
   Lock: undefined;
   Preview: undefined;
+  ConnectBank: undefined;
+  BankInbox: undefined;
 };

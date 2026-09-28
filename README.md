@@ -48,9 +48,20 @@ Expo Go must be on the **same Wi‑Fi**. If the QR code fails, in the Expo termi
 
 ---
 
+## Connect Sparkasse (Open Banking)
+
+Terra can import transactions from your Sparkasse via [Enable Banking](https://enablebanking.com) (PSD2). Your PIN never enters Terra.
+
+1. Create an Enable Banking app (sandbox first; Restricted Production for your own account).
+2. Whitelist the redirect URI (must match `ENABLE_BANKING_REDIRECT_URI` exactly; use HTTPS in production / a tunnel for phone).
+3. Copy keys into `backend/.env` — see [`backend/.env.example`](backend/.env.example).
+4. For local UI testing without bank credentials: `ENABLE_BANKING_MOCK=1`.
+5. Start the backend, set `EXPO_PUBLIC_API_URL` on the phone to a publicly reachable backend URL, open **Activity → Connect Sparkasse** (or Account menu), log in, authorize, then **Sync**.
+6. Uncategorized spends appear in **Inbox**; income lands in the vault.
+
 ## Backend (optional)
 
-Only needed for register/login, Backup / Restore, and optional AI price estimates.
+Needed for register/login, Backup / Restore, Sparkasse sync, and optional AI price estimates.
 
 1. Install **PostgreSQL** and create a database named `terra` (or change the URL).
 2. In the `backend` folder:

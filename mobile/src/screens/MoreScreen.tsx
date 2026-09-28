@@ -35,6 +35,15 @@ export function MoreScreen({ navigation }: Props) {
           <View style={styles.back} />
         </View>
 
+        <View style={styles.bankBar}>
+          <TapButton style={styles.bankBtn} onPress={() => navigation.navigate('ConnectBank')}>
+            <Text style={styles.bankBtnText}>Connect Sparkasse</Text>
+          </TapButton>
+          <TapButton style={styles.bankBtnSecondary} onPress={() => navigation.navigate('BankInbox')}>
+            <Text style={styles.bankBtnSecondaryText}>Inbox</Text>
+          </TapButton>
+        </View>
+
         <FlatList
           data={activity}
           keyExtractor={(item) => item.id}
@@ -95,6 +104,29 @@ const styles = StyleSheet.create({
   },
   backText: { fontSize: 18, color: colors.moss800 },
   title: { fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
+  bankBar: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: space.md,
+    marginBottom: space.sm,
+  },
+  bankBtn: {
+    flex: 1,
+    backgroundColor: colors.moss800,
+    borderRadius: 14,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  bankBtnText: { fontFamily: type.bodyBold, color: colors.parchment, fontSize: 14 },
+  bankBtnSecondary: {
+    backgroundColor: colors.parchmentDim,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bankBtnSecondaryText: { fontFamily: type.bodyBold, color: colors.moss900, fontSize: 14 },
   list: { paddingHorizontal: space.md, paddingBottom: space.xl },
   empty: { fontFamily: type.body, color: colors.textOnParchmentDim, textAlign: 'center', marginTop: 48 },
   row: {

@@ -13,7 +13,8 @@ model User {
   passwordHash String
   createdAt    DateTime @default(now())
 
-  backup       Backup?
+  backup          Backup?
+  bankConnections BankConnection[]
 }
 
 model Backup {
@@ -22,4 +23,44 @@ model Backup {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   data      Json
   updatedAt DateTime @updatedAt
+}
+
+model BankConnection {
+  id             String    @id @default(uuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       String    @default("enablebanking")
+  institutionId  String
+  institutionName String
+  country        String    @default("DE")
+  /// AES-GCM encrypted Enable Banking session id
+  sessionEnc     String
+  accountIds     Json
+  lastSyncedAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  transactions BankTransaction[]
+
+  @@unique([userId, institutionId])
+  @@index([userId])
+}
+
+model BankTransaction {
+  id            String   @id @default(uuid())
+  connectionId  String
+  connection    BankConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  externalId    String
+  bookingDate   String
+  amount        Float
+  currency      String   @default("EUR")
+  /// CRDT = income, DBIT = spend
+  creditDebit   String
+  remittance    String   @default("")
+  accountIbanHash String @default("")
+  raw           Json
+  createdAt     DateTime @default(now())
+
+  @@unique([connectionId, externalId])
+  @@index([connectionId])
 }

@@ -15,6 +15,8 @@ import { ReportsScreen } from '@/screens/ReportsScreen';
 import { AffordScreen } from '@/screens/AffordScreen';
 import { LockScreen } from '@/screens/LockScreen';
 import { PreviewScreen } from '@/screens/PreviewScreen';
+import { ConnectBankScreen } from '@/screens/ConnectBankScreen';
+import { BankInboxScreen } from '@/screens/BankInboxScreen';
 import { AuthNavigator } from './AuthNavigator';
 import { useAuthStore } from '@/store/authStore';
 import { colors } from '@/theme/tokens';
@@ -84,6 +86,16 @@ function AppStack() {
         name="Preview"
         component={PreviewScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="ConnectBank"
+        component={ConnectBankScreen}
+        options={{ headerShown: false, presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="BankInbox"
+        component={BankInboxScreen}
+        options={{ headerShown: false, presentation: 'modal' }}
       />
     </Stack.Navigator>
   );

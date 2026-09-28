@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Allocation, AllocationState, BankState, District, DistrictId, DistrictTarget, Transaction, ActivityItem, PocketId, MoneyLock } from '@/types';
+import type { ImportedBankTx } from '@/api/client';
 import {
   computeAllocationStateChain,
   cappedAssignAmount,
@@ -49,6 +50,11 @@ interface BudgetState {
 
   backupNow: () => Promise<{ success: boolean; error?: string }>;
   restoreFromBackup: () => Promise<{ success: boolean; error?: string }>;
+
+  /** Merge bank sync rows by externalId. Income → vault; spend → uncategorized (or suggested district). */
+  mergeImportedBankTxs: (rows: ImportedBankTx[]) => { added: number; skipped: number };
+  categorizeImportedTx: (txId: string, districtId: DistrictId) => void;
+  getUncategorizedTransactions: () => Transaction[];
 
   getReadyToAssign: () => number;
   getBankSnapshot: () => BankState;
@@ -301,6 +307,85 @@ export const useBudgetStore = create<BudgetState>()(
           return { success: false, error: e instanceof Error ? e.message : 'No backup found.' };
         }
       },
+
+      mergeImportedBankTxs: (rows) => {
+        const existing = new Set(
+          get()
+            .transactions.filter((t) => t.externalId)
+            .map((t) => t.externalId as string)
+        );
+        let added = 0;
+        let skipped = 0;
+        const toAdd: Transaction[] = [];
+        const activityAdds: ActivityItem[] = [];
+
+        for (const row of rows) {
+          if (existing.has(row.externalId)) {
+            skipped += 1;
+            continue;
+          }
+          existing.add(row.externalId);
+          const date = `${row.bookingDate}T12:00:00.000Z`;
+          if (row.kind === 'income') {
+            toAdd.push({
+              id: `bank-${row.externalId}`,
+              districtId: 'dining',
+              amount: row.amount,
+              note: row.remittance || 'Bank income',
+              date,
+              kind: 'income',
+              externalId: row.externalId,
+              importSource: 'sparkasse',
+            });
+            activityAdds.push({
+              id: `bank-dep-${row.externalId}`,
+              date,
+              kind: 'deposit',
+              amount: row.amount,
+              toId: 'vault',
+              note: row.remittance || 'Sparkasse',
+            });
+          } else {
+            const suggested = row.suggestedDistrictId as DistrictId | null;
+            const known = suggested && DEFAULT_DISTRICTS.some((d) => d.id === suggested);
+            toAdd.push({
+              id: `bank-${row.externalId}`,
+              districtId: (known ? suggested : 'dining') as DistrictId,
+              amount: row.amount,
+              note: row.remittance || 'Bank spend',
+              date,
+              kind: 'spend',
+              externalId: row.externalId,
+              importSource: 'sparkasse',
+              uncategorized: !known,
+            });
+          }
+          added += 1;
+        }
+
+        if (toAdd.length) {
+          set((state) => ({
+            transactions: [...state.transactions, ...toAdd],
+            activity: [...activityAdds, ...(state.activity ?? [])].sort((a, b) =>
+              b.date.localeCompare(a.date)
+            ),
+          }));
+        }
+        return { added, skipped };
+      },
+
+      categorizeImportedTx: (txId, districtId) => {
+        set((state) => ({
+          transactions: state.transactions.map((t) =>
+            t.id === txId ? { ...t, districtId, uncategorized: false } : t
+          ),
+        }));
+      },
+
+      getUncategorizedTransactions: () =>
+        get()
+          .transactions.filter((t) => t.uncategorized && t.kind === 'spend')
+          .sort((a, b) => b.date.localeCompare(a.date)),
 
       getReadyToAssign: () => {
         const { transactions, allocations, locks } = get();

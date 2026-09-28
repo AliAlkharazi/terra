@@ -58,7 +58,7 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
-      logout: () => set({ token: null, userId: null, email: null, mode: 'offline' }),
+      logout: () => set({ token: null, userId: null, email: null, mode: 'offline', hasOnboarded: false }),
 
       continueOffline: () => set({ mode: 'offline', hasOnboarded: true }),
 

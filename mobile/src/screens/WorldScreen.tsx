@@ -74,7 +74,13 @@ export function WorldScreen({ navigation }: Props) {
   };
 
   const openAccount = () => {
-    const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [{ text: 'Close', style: 'cancel' }];
+    const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [
+      {
+        text: 'Connect Sparkasse',
+        onPress: () => navigation.navigate('ConnectBank'),
+      },
+      { text: 'Close', style: 'cancel' },
+    ];
     if (mode === 'synced') {
       buttons.unshift(
         {
@@ -95,7 +101,13 @@ export function WorldScreen({ navigation }: Props) {
         { text: 'Log out', style: 'destructive', onPress: logout }
       );
     }
-    Alert.alert('Account', mode === 'synced' ? 'Backup keeps your data in the cloud.' : 'You are using Terra offline.', buttons);
+    Alert.alert(
+      'Account',
+      mode === 'synced'
+        ? 'Backup keeps your data in the cloud. Connect Sparkasse via Open Banking to import transactions.'
+        : 'You are using Terra offline. Log in to connect Sparkasse.',
+      buttons
+    );
   };
 
   return (

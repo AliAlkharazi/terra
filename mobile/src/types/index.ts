@@ -55,6 +55,11 @@ export interface Transaction {
   date: string;
   kind: TransactionKind;
   isCreditCard?: boolean; // only meaningful when kind === 'spend'
+  /** Stable id from bank import — used for dedupe */
+  externalId?: string;
+  importSource?: 'sparkasse';
+  /** Spend awaiting district assignment; excluded from category spent until assigned */
+  uncategorized?: boolean;
 }
 
 export interface Allocation {

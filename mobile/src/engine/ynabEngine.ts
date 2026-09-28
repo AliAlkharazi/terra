@@ -17,7 +17,13 @@ export function computeReadyToAssign(transactions: Transaction[], allocations: A
 
 export function computeMonthlySpent(transactions: Transaction[], districtId: DistrictId, month: string): number {
   return transactions
-    .filter((t) => t.districtId === districtId && t.kind === 'spend' && t.date.startsWith(month))
+    .filter(
+      (t) =>
+        t.districtId === districtId &&
+        t.kind === 'spend' &&
+        !t.uncategorized &&
+        t.date.startsWith(month)
+    )
     .reduce((sum, t) => sum + t.amount, 0);
 }
 

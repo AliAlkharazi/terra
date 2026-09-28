@@ -1,8 +1,45 @@
-export const API_BASE_URL = 'http://localhost:4000';
+/**
+ * Backend base URL.
+ * - Simulators: localhost is fine.
+ * - Physical phone / Expo Go: set EXPO_PUBLIC_API_URL to a tunnel HTTPS URL
+ *   (e.g. cloudflared → backend :4000) so the device can reach the API and
+ *   complete the Sparkasse OAuth callback.
+ */
+export const API_BASE_URL =
+  (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_API_URL) || 'http://localhost:4000';
 
 export interface AuthResponse {
   token: string;
   userId: string;
+}
+
+export interface BankInstitution {
+  id: string;
+  name: string;
+  country: string;
+  bic: string | null;
+  logo: string | null;
+}
+
+export interface BankConnectionSummary {
+  id: string;
+  institutionId: string;
+  institutionName: string;
+  country: string;
+  accounts: unknown;
+  lastSyncedAt: string | null;
+  createdAt: string;
+}
+
+export interface ImportedBankTx {
+  externalId: string;
+  bookingDate: string;
+  amount: number;
+  currency: string;
+  kind: 'income' | 'spend';
+  remittance: string;
+  suggestedDistrictId: string | null;
+  importSource: 'sparkasse';
 }
 
 export interface BackupResponse {
@@ -75,4 +112,47 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ item }),
     }),
+
+  listBankInstitutions: (token: string, opts?: { country?: string; q?: string }) => {
+    const params = new URLSearchParams();
+    params.set('country', opts?.country ?? 'DE');
+    if (opts?.q) params.set('q', opts.q);
+    return request<{ institutions: BankInstitution[]; mock?: boolean }>(
+      `/bank/institutions?${params}`,
+      {},
+      token
+    );
+  },
+
+  startBankConnect: (
+    token: string,
+    body: { institutionId: string; institutionName: string; country: string }
+  ) =>
+    request<{ url: string; state: string; mock?: boolean }>('/bank/connect', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }, token),
+
+  listBankConnections: (token: string) =>
+    request<{ connections: BankConnectionSummary[] }>('/bank/accounts', {}, token),
+
+  syncBank: (token: string, connectionId?: string) =>
+    request<{ imported: ImportedBankTx[]; created: number; skipped: number }>(
+      '/bank/sync',
+      {
+        method: 'POST',
+        body: JSON.stringify(connectionId ? { connectionId } : {}),
+      },
+      token
+    ),
+
+  disconnectBank: (token: string, connectionId?: string) =>
+    request<{ ok: boolean; deleted: number }>(
+      '/bank/connection',
+      {
+        method: 'DELETE',
+        body: JSON.stringify(connectionId ? { connectionId } : {}),
+      },
+      token
+    ),
 };
