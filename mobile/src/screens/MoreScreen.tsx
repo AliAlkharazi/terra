@@ -37,7 +37,7 @@ export function MoreScreen({ navigation }: Props) {
 
         <View style={styles.bankBar}>
           <TapButton style={styles.bankBtn} onPress={() => navigation.navigate('ConnectBank')}>
-            <Text style={styles.bankBtnText}>Connect Sparkasse</Text>
+            <Text style={styles.bankBtnText}>Sparkasse Saarbrücken</Text>
           </TapButton>
           <TapButton style={styles.bankBtnSecondary} onPress={() => navigation.navigate('BankInbox')}>
             <Text style={styles.bankBtnSecondaryText}>Inbox</Text>

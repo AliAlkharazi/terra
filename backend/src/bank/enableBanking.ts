@@ -177,7 +177,7 @@ export async function fetchAllTransactions(
 
 /** Demo ASPSPs when ENABLE_BANKING_MOCK=1 */
 export const MOCK_ASPSPS: Aspsp[] = [
+  { name: 'Sparkasse Saarbrücken', country: 'DE', bic: 'SAKSDE55XXX' },
   { name: 'Sparkasse Berlin', country: 'DE', bic: 'BELADEBEXXX' },
-  { name: 'Sparkasse KölnBonn', country: 'DE', bic: 'COLSDE33XXX' },
   { name: 'Deutsche Bank', country: 'DE', bic: 'DEUTDEFFXXX' },
 ];

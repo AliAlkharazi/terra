@@ -76,7 +76,7 @@ export function WorldScreen({ navigation }: Props) {
   const openAccount = () => {
     const buttons: { text: string; style?: 'cancel' | 'destructive'; onPress?: () => void }[] = [
       {
-        text: 'Connect Sparkasse',
+        text: 'Sparkasse Saarbrücken',
         onPress: () => navigation.navigate('ConnectBank'),
       },
       { text: 'Close', style: 'cancel' },

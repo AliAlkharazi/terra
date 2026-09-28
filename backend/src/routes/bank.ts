@@ -17,6 +17,7 @@ import {
   type Aspsp,
 } from '../bank/enableBanking';
 import { mockTransactionsForDemo, normalizeEbTransaction, type NormalizedBankTx } from '../bank/normalize';
+import { resolveSparkasseSaarbrucken } from '../bank/sparkasseSaarbrucken';
 
 export const bankRouter = Router();
 
@@ -79,6 +80,53 @@ bankRouter.get('/institutions', requireAuth, requireBankingConfigured, async (re
     })),
     mock: isMockMode() && !isEnableBankingConfigured(),
   });
+});
+
+/** One-button connect: always Sparkasse Saarbrücken. */
+bankRouter.post('/connect/sparkasse-saarbrucken', requireAuth, requireBankingConfigured, async (req: AuthedRequest, res) => {
+  try {
+    const inst = await resolveSparkasseSaarbrucken();
+    const state = `${req.userId!}:${randomUUID()}`;
+    mockPending.set(state, {
+      userId: req.userId!,
+      institutionId: inst.institutionId,
+      institutionName: inst.institutionName,
+      country: inst.country,
+    });
+
+    if (inst.mock) {
+      const url = `${redirectUri().replace(/\/$/, '')}?code=mock-${randomUUID()}&state=${encodeURIComponent(state)}`;
+      return res.json({
+        url,
+        state,
+        mock: true,
+        institution: inst,
+      });
+    }
+
+    const validUntil = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+    const { url } = await startAuthorization({
+      aspspName: inst.institutionName,
+      country: inst.country,
+      redirectUrl: redirectUri(),
+      state,
+      validUntilIso: validUntil,
+    });
+    return res.json({ url, state, mock: false, institution: inst });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : 'Could not start Sparkasse Saarbrücken connect';
+    console.error('[bank/connect/sparkasse-saarbrucken]', message);
+    return res.status(502).json({ error: message });
+  }
+});
+
+bankRouter.get('/sparkasse-saarbrucken', requireAuth, requireBankingConfigured, async (_req: AuthedRequest, res) => {
+  try {
+    const inst = await resolveSparkasseSaarbrucken();
+    res.json({ institution: inst });
+  } catch (e) {
+    res.status(502).json({ error: e instanceof Error ? e.message : 'Resolve failed' });
+  }
 });
 
 const connectSchema = z.object({
