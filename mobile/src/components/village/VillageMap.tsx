@@ -123,8 +123,8 @@ export function VillageMap({
         <Ellipse cx={CX} cy={CY + 22} rx="204" ry="104" fill="#2F6A34" />
         <Ellipse cx={CX} cy={CY + 4} rx="204" ry="104" fill="url(#discTop)" />
 
-        <Ellipse cx={CX} cy={CY} rx="118" ry="54" fill="none" stroke="#E8C45A" strokeWidth="4.5" />
-        <Ellipse cx={CX} cy={CY} rx="118" ry="54" fill="none" stroke="#FFE9A8" strokeWidth="1.6" opacity={0.75} />
+        <Ellipse cx={CX} cy={CY} rx="118" ry="54" fill="none" stroke={colors.vaultGold} strokeWidth="4.5" />
+        <Ellipse cx={CX} cy={CY} rx="118" ry="54" fill="none" stroke={colors.inkGoldBright} strokeWidth="1.6" opacity={0.75} />
 
         <Ellipse cx={CX} cy={CY - 28} rx="88" ry="68" fill="url(#vaultGlow)" />
 
@@ -140,7 +140,7 @@ export function VillageMap({
         <Text style={[styles.caption, { color: themeFor('vault').ink }]}>Main Vault</Text>
         <Text style={[styles.amount, { color: themeFor('vault').accent }]}>{formatEuro(vaultAmount)}</Text>
         {lockedAmount > 0 ? (
-          <Text style={[styles.amount, { color: themeFor('vault').ink, fontSize: 11 }]}>
+          <Text style={[styles.amount, styles.frozenAmt, { color: themeFor('vault').ink }]}>
             Frozen {formatEuro(lockedAmount, { cents: false })}
           </Text>
         ) : null}
@@ -186,8 +186,8 @@ const styles = StyleSheet.create({
     marginTop: -2,
     maxWidth: '100%',
     fontFamily: type.bodyBold,
-    fontSize: type.size.xs + 1,
-    color: '#FFF8E4',
+    fontSize: type.size.xs,
+    color: colors.inkGoldBright,
     textAlign: 'center',
     letterSpacing: 0.15,
     textShadowColor: 'rgba(8, 14, 10, 0.95)',
@@ -198,12 +198,16 @@ const styles = StyleSheet.create({
     marginTop: 2,
     maxWidth: '100%',
     fontFamily: type.mono,
-    fontSize: type.size.xs + 1,
+    fontSize: type.size.xs,
     color: colors.inkGold,
     textAlign: 'center',
     textShadowColor: 'rgba(8, 14, 10, 0.95)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
+  },
+  frozenAmt: {
+    fontSize: type.size.micro,
+    opacity: 0.9,
   },
   amountOverspent: {
     color: colors.coral500,

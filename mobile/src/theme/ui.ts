@@ -34,8 +34,6 @@ export const ui = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cream,
-    minWidth: layout.hitTarget,
-    minHeight: layout.hitTarget,
   },
   backBtnOnMoss: {
     width: layout.backSize,
@@ -44,8 +42,6 @@ export const ui = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.glassInk,
-    minWidth: layout.hitTarget,
-    minHeight: layout.hitTarget,
   },
   backGlyph: {
     fontFamily: type.bodyBold,

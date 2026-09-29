@@ -120,7 +120,8 @@ export const radius = {
 export const layout = {
   screenPad: space.md,
   screenPadLg: space.lg,
-  backSize: 40,
+  /** Matches hitTarget so back circles stay circular */
+  backSize: 48,
   listBottom: 40,
   dockPad: space.sm,
   hitTarget: 48,

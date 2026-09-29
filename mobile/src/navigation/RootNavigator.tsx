@@ -30,7 +30,7 @@ const modalHeader = {
   headerStyle: { backgroundColor: colors.parchment },
   headerShadowVisible: false,
   headerTintColor: colors.moss800,
-  headerTitleStyle: { fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
+  headerTitleStyle: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
 };
 
 function AppStack() {

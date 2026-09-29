@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { TapButton } from '@/components/TapButton';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, layout, radius, space, type } from '@/theme/tokens';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'] as const;
 
@@ -47,7 +47,7 @@ const styles = StyleSheet.create({
   },
   key: {
     width: '31%',
-    height: 56,
+    height: layout.hitTarget + 8,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
