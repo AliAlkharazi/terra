@@ -1,0 +1,222 @@
+import { StyleSheet } from 'react-native';
+import { colors, layout, radius, shadow, space, type } from './tokens';
+
+/**
+ * Shared StyleSheet fragments — import and compose in screens.
+ */
+export const ui = StyleSheet.create({
+  fill: { flex: 1 },
+  fillMoss: { flex: 1, backgroundColor: colors.moss800 },
+  fillParchment: { flex: 1, backgroundColor: colors.parchment },
+
+  screenPad: {
+    paddingHorizontal: layout.screenPad,
+  },
+  screenPadLg: {
+    paddingHorizontal: layout.screenPadLg,
+  },
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rowBetween: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  backBtn: {
+    width: layout.backSize,
+    height: layout.backSize,
+    borderRadius: layout.backSize / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cream,
+  },
+  backBtnOnMoss: {
+    width: layout.backSize,
+    height: layout.backSize,
+    borderRadius: layout.backSize / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.glassInk,
+  },
+  backGlyph: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.lg,
+    color: colors.moss900,
+    lineHeight: type.size.lg,
+  },
+  backGlyphOnMoss: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.lg,
+    color: colors.parchment,
+    lineHeight: type.size.lg,
+  },
+
+  title: {
+    fontFamily: type.display,
+    fontSize: type.size.xxl,
+    color: colors.textOnParchment,
+  },
+  titleOnMoss: {
+    fontFamily: type.display,
+    fontSize: type.size.xxl,
+    color: colors.textOnMoss,
+  },
+  subtitle: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnParchmentDim,
+    marginTop: space.xs,
+    lineHeight: Math.round(type.size.sm * type.line.normal),
+  },
+  subtitleOnMoss: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnMossDim,
+    marginTop: space.xs,
+    lineHeight: Math.round(type.size.sm * type.line.normal),
+  },
+  sectionLabel: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.xs,
+    color: colors.textOnParchmentDim,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+
+  card: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.card,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group,
+    ...shadow.soft,
+  },
+  cardFlat: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.card,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group,
+  },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.group,
+    paddingVertical: space.group,
+    paddingHorizontal: space.md,
+    backgroundColor: colors.creamLift,
+    borderRadius: radius.card,
+    marginBottom: space.sm,
+  },
+
+  primaryBtn: {
+    backgroundColor: colors.moss900,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: layout.hitTarget,
+  },
+  primaryBtnText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.md,
+    color: colors.parchment,
+  },
+  secondaryBtn: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: layout.hitTarget,
+  },
+  secondaryBtnText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.md,
+    color: colors.moss900,
+  },
+  emberBtn: {
+    backgroundColor: colors.ember500,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: layout.hitTarget,
+  },
+  emberBtnText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.md,
+    color: colors.moss900,
+  },
+
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    backgroundColor: colors.cream,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.group,
+    paddingVertical: space.sm,
+  },
+  chipOnMoss: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    backgroundColor: colors.glassInk,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.group,
+    paddingVertical: space.xs,
+  },
+  chipText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.sm,
+    color: colors.moss900,
+  },
+  chipTextOnMoss: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.xs,
+    color: colors.parchment,
+    letterSpacing: 0.3,
+  },
+
+  input: {
+    fontFamily: type.body,
+    fontSize: type.size.base,
+    color: colors.textOnParchment,
+    backgroundColor: colors.creamLift,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group,
+    borderWidth: 1,
+    borderColor: colors.parchmentDim,
+  },
+
+  sheet: {
+    backgroundColor: colors.parchment,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: space.lg,
+    paddingBottom: layout.listBottom,
+    gap: space.sm,
+  },
+  sheetTitle: {
+    fontFamily: type.display,
+    fontSize: type.size.xl,
+    color: colors.moss900,
+    marginBottom: space.sm,
+  },
+
+  dock: {
+    marginHorizontal: space.md,
+    marginBottom: space.md,
+    backgroundColor: colors.dockBg,
+    borderRadius: radius.panel,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: space.tight,
+    gap: space.tight,
+    ...shadow.dock,
+  },
+});

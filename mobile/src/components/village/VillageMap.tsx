@@ -18,23 +18,25 @@ interface Props {
 
 const SCENE_W = 440;
 const SCENE_H = 400;
-const VAULT_SIZE = 188;
-const BUILDING_SIZE = 156;
+/** Slightly smaller buildings + wider pad grid → less clumping */
+const VAULT_SIZE = 176;
+const BUILDING_SIZE = 142;
 
 type Pad = { x: number; y: number; rx: number; ry: number; theme?: PocketId };
 
 const CX = 220;
-const CY = 200;
-const DX = 100;
-const DY = 72;
+const CY = 196;
+/** Horizontal / vertical pad spacing (isometric village grid) */
+const DX = 114;
+const DY = 82;
 
 const PADS: Record<string, Pad> = {
-  dining: { x: CX - DX, y: CY - DY, rx: 38, ry: 16, theme: 'dining' },
-  property: { x: CX + DX, y: CY - DY, rx: 38, ry: 16, theme: 'property' },
-  vault: { x: CX, y: CY, rx: 48, ry: 20, theme: 'vault' },
-  groceries: { x: CX - DX, y: CY + DY, rx: 38, ry: 16, theme: 'groceries' },
-  bills: { x: CX + DX, y: CY + DY, rx: 38, ry: 16, theme: 'bills' },
-  transport: { x: CX, y: CY + DY + 22, rx: 38, ry: 16, theme: 'transport' },
+  dining: { x: CX - DX, y: CY - DY, rx: 36, ry: 15, theme: 'dining' },
+  property: { x: CX + DX, y: CY - DY, rx: 36, ry: 15, theme: 'property' },
+  vault: { x: CX, y: CY, rx: 46, ry: 19, theme: 'vault' },
+  groceries: { x: CX - DX, y: CY + DY, rx: 36, ry: 15, theme: 'groceries' },
+  bills: { x: CX + DX, y: CY + DY, rx: 36, ry: 15, theme: 'bills' },
+  transport: { x: CX, y: CY + DY + 30, rx: 36, ry: 15, theme: 'transport' },
 };
 
 function GrassPad({ pad }: { pad: Pad }) {
@@ -87,7 +89,7 @@ export function VillageMap({
   onVaultPress,
 }: Props) {
   const { width } = useWindowDimensions();
-  const sceneW = Math.min(width - 8, 440);
+  const sceneW = Math.min(width - 16, 440);
   const sceneH = sceneW * (SCENE_H / SCENE_W);
 
   const vaultLayout = place(PADS.vault, VAULT_SIZE, sceneW, sceneH);
@@ -179,19 +181,21 @@ const styles = StyleSheet.create({
     position: 'absolute',
   },
   caption: {
-    marginTop: -8,
+    marginTop: -4,
     fontFamily: type.bodyBold,
-    fontSize: 13,
+    fontSize: type.size.sm,
     color: '#FFF8E4',
     textAlign: 'center',
+    letterSpacing: 0.2,
     textShadowColor: 'rgba(8, 14, 10, 0.95)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
   },
   amount: {
+    marginTop: 2,
     fontFamily: type.mono,
-    fontSize: 13,
-    color: '#FFE9A8',
+    fontSize: type.size.sm,
+    color: colors.inkGold,
     textAlign: 'center',
     textShadowColor: 'rgba(8, 14, 10, 0.95)',
     textShadowOffset: { width: 0, height: 1 },

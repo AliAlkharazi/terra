@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import { TapButton } from '@/components/TapButton';
-import { colors, space, type } from '@/theme/tokens';
+import { colors, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { useBudgetStore } from '@/store/budgetStore';
 import type { DistrictId, Transaction } from '@/types';
@@ -102,7 +102,7 @@ function InboxRow({
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: '#F4F1EA' },
+  fill: { flex: 1, backgroundColor: colors.creamLift },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -132,19 +132,21 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: space.md, paddingBottom: 40 },
   empty: { textAlign: 'center', color: colors.textOnParchmentDim, marginTop: 48, fontFamily: type.body },
   card: {
-    backgroundColor: '#EDE8DC',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 8,
+    backgroundColor: colors.cream,
+    borderRadius: radius.md,
+    padding: space.group,
+    marginBottom: space.sm,
   },
   note: { fontFamily: type.bodyBold, fontSize: 15, color: colors.moss900 },
   meta: { fontFamily: type.body, fontSize: 12, color: colors.textOnParchmentDim, marginTop: 4 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.group },
   chip: {
     backgroundColor: colors.moss800,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.group,
+    paddingVertical: space.sm,
+    minHeight: 36,
+    justifyContent: 'center',
   },
   chipText: { fontFamily: type.bodyBold, fontSize: 13, color: colors.parchment },
 });
