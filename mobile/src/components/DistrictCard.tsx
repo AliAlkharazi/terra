@@ -1,7 +1,8 @@
 import React from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { District, AllocationState } from '@/types';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, radius, shadow, space, type } from '@/theme/tokens';
+import { formatEuro } from '@/theme/money';
 import { CategoryIcon } from '@/components/CategoryIcon';
 
 interface Props {
@@ -20,9 +21,11 @@ export function DistrictCard({ district, state, onPress }: Props) {
         <View style={styles.iconCircle}>
           <CategoryIcon name={district.id} size={20} color={colors.parchment} />
         </View>
-        <Text style={styles.label} numberOfLines={1}>{district.label}</Text>
+        <Text style={styles.label} numberOfLines={1}>
+          {district.label}
+        </Text>
         <Text style={[styles.available, state.isOverspent && styles.availableOverspent]}>
-          {state.available < 0 ? '-' : ''}${Math.abs(state.available).toFixed(0)}
+          {formatEuro(state.available, { cents: false })}
         </Text>
 
         {state.target && state.targetProgressPct !== null && (
@@ -43,22 +46,38 @@ const styles = StyleSheet.create({
     marginRight: space.sm,
     marginBottom: space.sm,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: { shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
-      android: { elevation: 4 },
-    }),
+    ...shadow.soft,
   },
-  cardPressed: { opacity: 0.85 },
+  cardPressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
   accentBar: { height: 3, width: '100%' },
-  body: { padding: space.sm, alignItems: 'center' },
+  body: { padding: space.group, alignItems: 'center', gap: space.xs },
   iconCircle: {
-    width: 40, height: 40, borderRadius: 20, backgroundColor: colors.moss800,
-    alignItems: 'center', justifyContent: 'center', marginBottom: space.xs,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: colors.moss800,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  icon: { fontSize: 18 },
-  label: { fontFamily: type.bodyBold, fontSize: type.size.xs, color: colors.parchment, textAlign: 'center' },
-  available: { fontFamily: type.mono, fontSize: type.size.sm, color: colors.sage500, marginTop: 2 },
+  label: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.xs,
+    color: colors.parchment,
+    textAlign: 'center',
+  },
+  available: {
+    fontFamily: type.mono,
+    fontSize: type.size.sm,
+    color: colors.sage500,
+  },
   availableOverspent: { color: colors.coral500 },
-  progressTrack: { height: 4, width: '100%', borderRadius: radius.pill, backgroundColor: colors.moss800, marginTop: space.xs, overflow: 'hidden' },
+  progressTrack: {
+    height: 4,
+    width: '100%',
+    borderRadius: radius.pill,
+    backgroundColor: colors.moss800,
+    marginTop: space.xs,
+    overflow: 'hidden',
+  },
   progressFill: { height: '100%', backgroundColor: colors.gold500, borderRadius: radius.pill },
 });

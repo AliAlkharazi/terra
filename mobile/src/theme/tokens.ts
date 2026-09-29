@@ -37,9 +37,14 @@ export const colors = {
   glass: 'rgba(240,234,214,0.08)',
   glassStrong: 'rgba(240,234,214,0.12)',
   glassInk: 'rgba(18,40,26,0.55)',
+  /** Soft gold wash for highlight cards (insights / freeze chips) */
+  goldWash: 'rgba(232,196,90,0.12)',
+  goldBorder: 'rgba(232,196,90,0.32)',
+  dimOnMoss: 'rgba(240,234,214,0.35)',
   dockBg: 'rgba(12, 18, 14, 0.72)',
   backdrop: 'rgba(12,18,14,0.45)',
   hairline: 'rgba(240,234,214,0.14)',
+  sunGlow: 'rgba(232, 176, 72, 0.18)',
 } as const;
 
 export const type = {

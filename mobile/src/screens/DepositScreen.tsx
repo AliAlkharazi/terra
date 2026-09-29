@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     color: colors.parchment,
     marginBottom: space.md,
   },
-  amountDim: { color: 'rgba(240,234,214,0.35)' },
+  amountDim: { color: colors.dimOnMoss },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -77,7 +77,7 @@ const styles = StyleSheet.create({
   },
   chipDot: { color: colors.gold500, fontSize: 10 },
   chipText: { fontFamily: type.bodyBold, fontSize: type.size.sm, color: colors.parchment },
-  chipCaret: { color: 'rgba(240,234,214,0.5)', fontSize: type.size.xs },
+  chipCaret: { color: colors.dimOnMoss, fontSize: type.size.xs },
   bottom: { paddingHorizontal: space.md, paddingBottom: space.md, gap: space.md },
   continue: {
     backgroundColor: colors.parchment,

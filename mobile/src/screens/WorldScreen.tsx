@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: 'rgba(232, 176, 72, 0.18)',
+    backgroundColor: colors.sunGlow,
   },
   header: {
     alignItems: 'center',
@@ -309,16 +309,16 @@ const styles = StyleSheet.create({
   },
   mapWrap: { flex: 1, justifyContent: 'center', paddingVertical: space.sm },
   skyLane: {
-    height: 88,
-    marginTop: space.xs,
+    height: 92,
+    marginTop: space.sm,
     zIndex: 6,
     overflow: 'visible',
   },
   goals: {
     position: 'absolute',
-    right: -72,
-    top: space.xs,
-    width: 188,
+    right: -64,
+    top: space.sm,
+    width: 180,
   },
   goalsInner: {
     flexDirection: 'row',
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   dockDot: {
     fontFamily: type.body,
     fontSize: type.size.sm,
-    color: 'rgba(240,234,214,0.28)',
+    color: colors.dimOnMoss,
   },
   account: { position: 'absolute', top: 56, left: space.md, zIndex: 8 },
   accountText: {

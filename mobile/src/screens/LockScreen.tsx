@@ -128,7 +128,7 @@ const styles = StyleSheet.create({
     color: colors.parchment,
     marginTop: space.xs,
   },
-  amountDim: { color: 'rgba(240,234,214,0.35)' },
+  amountDim: { color: colors.dimOnMoss },
   free: {
     fontFamily: type.body,
     fontSize: type.size.sm,
@@ -164,7 +164,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingVertical: space.group,
     borderWidth: 1,
-    borderColor: 'rgba(232,196,90,0.35)',
+    borderColor: colors.goldBorder,
     minHeight: 44,
     justifyContent: 'center',
   },
