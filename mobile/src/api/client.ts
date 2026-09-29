@@ -133,6 +133,15 @@ export const api = {
       body: JSON.stringify(body),
     }, token),
 
+  /** One-button connect for Sparkasse Saarbrücken. */
+  connectSparkasseSaarbrucken: (token: string) =>
+    request<{
+      url: string;
+      state: string;
+      mock?: boolean;
+      institution: { institutionId: string; institutionName: string; country: string };
+    }>('/bank/connect/sparkasse-saarbrucken', { method: 'POST', body: '{}' }, token),
+
   listBankConnections: (token: string) =>
     request<{ connections: BankConnectionSummary[] }>('/bank/accounts', {}, token),
 

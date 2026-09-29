@@ -56,7 +56,7 @@ Terra can import transactions from your Sparkasse via [Enable Banking](https://e
 2. Whitelist the redirect URI (must match `ENABLE_BANKING_REDIRECT_URI` exactly; use HTTPS in production / a tunnel for phone).
 3. Copy keys into `backend/.env` — see [`backend/.env.example`](backend/.env.example).
 4. For local UI testing without bank credentials: `ENABLE_BANKING_MOCK=1`.
-5. Start the backend, set `EXPO_PUBLIC_API_URL` on the phone to a publicly reachable backend URL, open **Activity → Connect Sparkasse** (or Account menu), log in, authorize, then **Sync**.
+5. Start the backend, set `EXPO_PUBLIC_API_URL` on the phone to a publicly reachable backend URL, open **Activity → Sparkasse Saarbrücken**, log in, tap the single **Connect Sparkasse Saarbrücken** button, authorize in Online-Banking, then Sync runs automatically.
 6. Uncategorized spends appear in **Inbox**; income lands in the vault.
 
 ## Backend (optional)
