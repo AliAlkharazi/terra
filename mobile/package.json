@@ -6,6 +6,9 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
+    "phone": "expo start --tunnel",
+    "tunnel": "expo start --tunnel",
+    "start:tunnel": "expo start --tunnel --clear",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
     "test": "jest"
