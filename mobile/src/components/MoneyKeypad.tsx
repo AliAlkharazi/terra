@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { TapButton } from '@/components/TapButton';
-import { colors, radius, type } from '@/theme/tokens';
+import { colors, layout, radius, space, type } from '@/theme/tokens';
 
 const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'back'] as const;
 
@@ -43,18 +43,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    rowGap: 10,
+    rowGap: space.tight,
   },
   key: {
     width: '31%',
-    height: 56,
+    height: layout.hitTarget + 8,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  keyDark: { backgroundColor: 'rgba(240, 234, 214, 0.08)' },
+  keyDark: { backgroundColor: colors.glass },
   keyLight: { backgroundColor: colors.parchmentDim },
-  label: { fontFamily: type.bodyBold, fontSize: 26 },
+  label: { fontFamily: type.bodyBold, fontSize: type.size.xl },
   labelDark: { color: colors.parchment },
   labelLight: { color: colors.moss800 },
 });

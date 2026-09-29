@@ -3,8 +3,9 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { CategoryIcon } from '@/components/CategoryIcon';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { DistrictId } from '@/types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -103,9 +104,12 @@ export function AddTransactionScreen({ navigation, route }: Props) {
             onChangeText={setNote}
           />
 
-          <TapButton style={[styles.saveButton, mode === 'income' && styles.saveButtonIncome]} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>{copy.button}</Text>
-          </TapButton>
+          <PrimaryButton
+            label={copy.button}
+            variant="ember"
+            onPress={handleSave}
+            style={[styles.saveButton, mode === 'income' && styles.saveButtonIncome]}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -116,29 +120,67 @@ const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.parchment },
   content: { padding: space.lg },
   modeRow: { flexDirection: 'row', gap: space.sm, marginBottom: space.lg },
-  modeButton: { flex: 1, paddingVertical: space.sm, borderRadius: radius.pill, alignItems: 'center', backgroundColor: colors.parchmentDim },
+  modeButton: {
+    flex: 1,
+    paddingVertical: space.group,
+    minHeight: layout.hitTarget,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.parchmentDim,
+  },
   modeButtonActiveSpend: { backgroundColor: colors.coral500 },
   modeButtonActiveIncome: { backgroundColor: colors.sage500 },
   modeButtonText: { fontFamily: type.bodyBold, fontSize: type.size.sm, color: colors.textOnParchmentDim },
   modeButtonTextActive: { color: colors.moss900 },
   title: { fontFamily: type.display, fontSize: type.size.xl, color: colors.textOnParchment },
-  subtitle: { fontFamily: type.body, fontSize: type.size.sm, color: colors.textOnParchmentDim, marginTop: space.xs, marginBottom: space.md },
-  label: { fontFamily: type.bodyBold, fontSize: type.size.sm, color: colors.textOnParchmentDim, marginTop: space.md, marginBottom: space.xs },
-  amountInput: { fontFamily: type.mono, fontSize: type.size.xxl, color: colors.textOnParchment, borderBottomWidth: 2, borderBottomColor: colors.moss700, paddingVertical: space.sm },
+  subtitle: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnParchmentDim,
+    marginTop: space.xs,
+    marginBottom: space.md,
+    lineHeight: Math.round(type.size.sm * 1.4),
+  },
+  label: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.sm,
+    color: colors.textOnParchmentDim,
+    marginTop: space.md,
+    marginBottom: space.xs,
+  },
+  amountInput: {
+    fontFamily: type.mono,
+    fontSize: type.size.xxl,
+    color: colors.textOnParchment,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.moss700,
+    paddingVertical: space.sm,
+  },
   districtRow: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  districtChip: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.sm, paddingVertical: space.xs, borderRadius: radius.pill, backgroundColor: colors.parchmentDim, marginRight: space.xs, marginBottom: space.xs },
+  districtChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: space.group,
+    paddingVertical: space.sm,
+    borderRadius: radius.pill,
+    backgroundColor: colors.cream,
+  },
   districtChipActive: { backgroundColor: colors.moss700 },
-  districtChipIcon: { marginRight: 4 },
+  districtChipIcon: { marginRight: space.xs },
   districtChipLabel: { fontFamily: type.body, fontSize: type.size.sm, color: colors.textOnParchment },
   districtChipLabelActive: { color: colors.parchment },
-  creditCardToggle: { flexDirection: 'row', alignItems: 'center', marginTop: space.md },
-  checkbox: { width: 22, height: 22, borderRadius: radius.sm, borderWidth: 2, borderColor: colors.moss700, alignItems: 'center', justifyContent: 'center', marginRight: space.sm },
-  checkboxActive: { backgroundColor: colors.moss700 },
-  checkboxMark: { color: colors.parchment, fontFamily: type.bodyBold, fontSize: 13 },
-  creditCardLabel: { fontFamily: type.body, fontSize: type.size.sm, color: colors.textOnParchment },
-  creditCardNote: { fontFamily: type.body, fontSize: type.size.xs, color: colors.textOnParchmentDim, marginTop: space.xs },
-  noteInput: { fontFamily: type.body, fontSize: type.size.base, color: colors.textOnParchment, borderBottomWidth: 1, borderBottomColor: colors.parchmentDim, paddingVertical: space.sm },
-  saveButton: { marginTop: space.xl, backgroundColor: colors.ember500, borderRadius: radius.md, paddingVertical: space.md, alignItems: 'center' },
+  noteInput: {
+    fontFamily: type.body,
+    fontSize: type.size.base,
+    color: colors.textOnParchment,
+    backgroundColor: colors.creamLift,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.parchmentDim,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group,
+  },
+  saveButton: { marginTop: space.xl },
   saveButtonIncome: { backgroundColor: colors.sage500 },
-  saveButtonText: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
 });

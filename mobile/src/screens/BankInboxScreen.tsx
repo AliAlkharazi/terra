@@ -1,10 +1,11 @@
 import React, { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import { TapButton } from '@/components/TapButton';
-import { colors, space, type } from '@/theme/tokens';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
+import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { useBudgetStore } from '@/store/budgetStore';
 import type { DistrictId, Transaction } from '@/types';
@@ -29,13 +30,7 @@ export function BankInboxScreen({ navigation }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
-          <Text style={styles.title}>Uncategorized</Text>
-          <View style={styles.back} />
-        </View>
+        <ModalTopBar title="Uncategorized" onBack={() => navigation.goBack()} />
 
         <Text style={styles.lead}>
           Bank spends land here until you assign a district. Suggested matches from keywords are already
@@ -80,14 +75,14 @@ function InboxRow({
 }) {
   return (
     <View style={styles.card}>
-      <Pressable onPress={onToggle}>
+      <TapButton onPress={onToggle} style={styles.rowTap}>
         <Text style={styles.note}>{item.note || 'Bank spend'}</Text>
         <Text style={styles.meta}>
           {new Date(item.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
           {' · '}
           {formatEuro(item.amount)}
         </Text>
-      </Pressable>
+      </TapButton>
       {expanded && (
         <View style={styles.chips}>
           {districts.map((d) => (
@@ -102,25 +97,7 @@ function InboxRow({
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: '#F4F1EA' },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-    paddingTop: space.xs,
-    marginBottom: space.sm,
-  },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.parchmentDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { fontSize: 18, color: colors.moss800 },
-  title: { fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
+  fill: { flex: 1, backgroundColor: colors.creamLift },
   lead: {
     fontFamily: type.body,
     fontSize: 13,
@@ -132,19 +109,22 @@ const styles = StyleSheet.create({
   list: { paddingHorizontal: space.md, paddingBottom: 40 },
   empty: { textAlign: 'center', color: colors.textOnParchmentDim, marginTop: 48, fontFamily: type.body },
   card: {
-    backgroundColor: '#EDE8DC',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 8,
+    backgroundColor: colors.cream,
+    borderRadius: radius.md,
+    padding: space.group,
+    marginBottom: space.sm,
   },
   note: { fontFamily: type.bodyBold, fontSize: 15, color: colors.moss900 },
   meta: { fontFamily: type.body, fontSize: 12, color: colors.textOnParchmentDim, marginTop: 4 },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 12 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.group },
+  rowTap: { alignItems: 'flex-start' },
   chip: {
     backgroundColor: colors.moss800,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.group,
+    paddingVertical: space.sm,
+    minHeight: layout.hitTarget,
+    justifyContent: 'center',
   },
   chipText: { fontFamily: type.bodyBold, fontSize: 13, color: colors.parchment },
 });

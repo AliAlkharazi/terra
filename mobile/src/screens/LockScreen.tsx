@@ -5,8 +5,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { ui } from '@/theme/ui';
 import { MoneyKeypad, appendAmount } from '@/components/MoneyKeypad';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { lockedTotal } from '@/engine/locks';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -42,13 +45,10 @@ export function LockScreen({ navigation }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <TapButton onPress={() => navigation.goBack()} style={styles.close} pressedScale={0.9}>
-          <Text style={styles.closeText}>✕</Text>
-        </TapButton>
+        <ModalTopBar title="Freeze" onBack={() => navigation.goBack()} tone="moss" />
 
         <View style={styles.hero}>
-          <Text style={styles.kicker}>Freeze</Text>
-          <Text style={[styles.amount, amount === 0 && styles.amountDim]}>€{amount || 0}</Text>
+          <Text style={[ui.amountHero, amount === 0 && ui.amountHeroDim]}>€{amount || 0}</Text>
           <Text style={styles.free}>
             {formatEuro(vault, { cents: false })} free
             {alreadyLocked > 0 ? ` · ${formatEuro(alreadyLocked, { cents: false })} already frozen` : ''}
@@ -87,9 +87,13 @@ export function LockScreen({ navigation }: Props) {
                 <TapButton style={styles.step} onPress={() => setCustomDays((d) => d + 1)}>
                   <Text style={styles.stepText}>+</Text>
                 </TapButton>
-                <TapButton style={styles.lockNow} onPress={() => lockFor(customDays)} disabled={!canLock}>
-                  <Text style={styles.lockNowText}>Freeze</Text>
-                </TapButton>
+                <PrimaryButton
+                  label="Freeze"
+                  variant="ember"
+                  onPress={() => lockFor(customDays)}
+                  disabled={!canLock}
+                  style={styles.lockNow}
+                />
               </Animated.View>
             ) : null}
           </Animated.View>
@@ -110,57 +114,74 @@ export function LockScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: '#0C120E' },
-  close: {
-    alignSelf: 'flex-start',
-    marginLeft: space.md,
+  fill: { flex: 1, backgroundColor: colors.moss900 },
+  hero: { alignItems: 'center', paddingTop: space.sm, gap: space.xs },
+  free: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.sage300,
     marginTop: space.xs,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(240,234,214,0.08)',
-    alignItems: 'center',
+  },
+  hint: {
+    textAlign: 'center',
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnMossDim,
+    marginTop: space.lg,
+    paddingHorizontal: space.lg,
+    lineHeight: Math.round(type.size.sm * 1.45),
+  },
+  durations: { paddingHorizontal: space.md, marginTop: space.lg },
+  pick: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.sm,
+    color: colors.parchment,
+    marginBottom: space.group,
+    textAlign: 'center',
+  },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: space.sm,
     justifyContent: 'center',
   },
-  closeText: { color: colors.parchment, fontSize: 16, fontFamily: type.bodyBold },
-  hero: { alignItems: 'center', paddingTop: 12 },
-  kicker: { fontFamily: type.bodyBold, fontSize: 12, color: colors.gold500, letterSpacing: 1.2 },
-  amount: { fontFamily: type.display, fontSize: 64, color: colors.parchment, marginTop: 4 },
-  amountDim: { color: 'rgba(240,234,214,0.35)' },
-  free: { fontFamily: type.body, fontSize: 13, color: colors.sage300, marginTop: 4 },
-  hint: { textAlign: 'center', fontFamily: type.body, fontSize: 14, color: colors.textOnMossDim, marginTop: 24 },
-  durations: { paddingHorizontal: space.md, marginTop: 20 },
-  pick: { fontFamily: type.bodyBold, fontSize: 13, color: colors.parchment, marginBottom: 10, textAlign: 'center' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
   chip: {
-    backgroundColor: 'rgba(240,234,214,0.1)',
+    backgroundColor: colors.glassStrong,
     borderRadius: radius.pill,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group,
     borderWidth: 1,
-    borderColor: 'rgba(232,196,90,0.35)',
+    borderColor: colors.goldBorder,
+    minHeight: layout.hitTarget,
+    justifyContent: 'center',
   },
   chipOn: { backgroundColor: colors.ember500, borderColor: colors.ember500 },
   chipOff: { opacity: 0.45 },
-  chipText: { fontFamily: type.bodyBold, fontSize: 14, color: colors.parchment },
+  chipText: { fontFamily: type.bodyBold, fontSize: type.size.sm, color: colors.parchment },
   chipTextOn: { color: colors.moss900 },
-  customRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, marginTop: 14 },
+  customRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: space.group,
+    marginTop: space.group,
+  },
   step: {
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'rgba(240,234,214,0.1)',
+    backgroundColor: colors.glassStrong,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  stepText: { fontFamily: type.display, fontSize: 22, color: colors.parchment },
-  customDays: { fontFamily: type.bodyBold, fontSize: 16, color: colors.parchment, minWidth: 78, textAlign: 'center' },
-  lockNow: {
-    backgroundColor: colors.ember500,
-    borderRadius: radius.pill,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+  stepText: { fontFamily: type.display, fontSize: type.size.xl - 4, color: colors.parchment },
+  customDays: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.base,
+    color: colors.parchment,
+    minWidth: 78,
+    textAlign: 'center',
   },
-  lockNowText: { fontFamily: type.bodyBold, fontSize: 15, color: colors.moss900 },
+  lockNow: { paddingHorizontal: space.group + 4 },
   bottom: { marginTop: 'auto', paddingHorizontal: space.md, paddingBottom: space.md },
 });

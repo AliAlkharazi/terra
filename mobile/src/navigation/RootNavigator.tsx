@@ -19,9 +19,19 @@ import { ConnectBankScreen } from '@/screens/ConnectBankScreen';
 import { BankInboxScreen } from '@/screens/BankInboxScreen';
 import { AuthNavigator } from './AuthNavigator';
 import { useAuthStore } from '@/store/authStore';
-import { colors } from '@/theme/tokens';
+import { colors, type } from '@/theme/tokens';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+const modalHeader = {
+  headerShown: true as const,
+  presentation: 'modal' as const,
+  title: '',
+  headerStyle: { backgroundColor: colors.parchment },
+  headerShadowVisible: false,
+  headerTintColor: colors.moss800,
+  headerTitleStyle: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
+};
 
 function AppStack() {
   return (
@@ -30,7 +40,7 @@ function AppStack() {
       <Stack.Screen
         name="AddTransaction"
         component={AddTransactionScreen}
-        options={{ headerShown: true, presentation: 'modal', title: '', headerStyle: { backgroundColor: colors.parchment } }}
+        options={modalHeader}
       />
       <Stack.Screen
         name="DistrictDetail"
@@ -40,7 +50,7 @@ function AppStack() {
       <Stack.Screen
         name="EditBudget"
         component={EditBudgetScreen}
-        options={{ headerShown: true, presentation: 'modal', title: '', headerStyle: { backgroundColor: colors.parchment } }}
+        options={modalHeader}
       />
       <Stack.Screen
         name="Assign"

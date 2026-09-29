@@ -18,23 +18,25 @@ interface Props {
 
 const SCENE_W = 440;
 const SCENE_H = 400;
-const VAULT_SIZE = 188;
-const BUILDING_SIZE = 156;
+/** Slightly smaller buildings + wider pad grid → less clumping */
+const VAULT_SIZE = 176;
+const BUILDING_SIZE = 142;
 
 type Pad = { x: number; y: number; rx: number; ry: number; theme?: PocketId };
 
 const CX = 220;
-const CY = 200;
-const DX = 100;
-const DY = 72;
+const CY = 196;
+/** Horizontal / vertical pad spacing (isometric village grid) */
+const DX = 114;
+const DY = 82;
 
 const PADS: Record<string, Pad> = {
-  dining: { x: CX - DX, y: CY - DY, rx: 38, ry: 16, theme: 'dining' },
-  property: { x: CX + DX, y: CY - DY, rx: 38, ry: 16, theme: 'property' },
-  vault: { x: CX, y: CY, rx: 48, ry: 20, theme: 'vault' },
-  groceries: { x: CX - DX, y: CY + DY, rx: 38, ry: 16, theme: 'groceries' },
-  bills: { x: CX + DX, y: CY + DY, rx: 38, ry: 16, theme: 'bills' },
-  transport: { x: CX, y: CY + DY + 22, rx: 38, ry: 16, theme: 'transport' },
+  dining: { x: CX - DX, y: CY - DY, rx: 36, ry: 15, theme: 'dining' },
+  property: { x: CX + DX, y: CY - DY, rx: 36, ry: 15, theme: 'property' },
+  vault: { x: CX, y: CY, rx: 46, ry: 19, theme: 'vault' },
+  groceries: { x: CX - DX, y: CY + DY, rx: 36, ry: 15, theme: 'groceries' },
+  bills: { x: CX + DX, y: CY + DY, rx: 36, ry: 15, theme: 'bills' },
+  transport: { x: CX, y: CY + DY + 30, rx: 36, ry: 15, theme: 'transport' },
 };
 
 function GrassPad({ pad }: { pad: Pad }) {
@@ -64,14 +66,15 @@ function place(pad: Pad, size: number, sceneW: number, sceneH: number) {
   };
 }
 
-const HIT = 52;
+/** Tap targets sized for thumb; slightly larger than visual pad to avoid mis-taps */
+const HIT = 58;
 
 function hitBox(pad: Pad, sceneW: number, sceneH: number, extra = 0) {
   const w = HIT + extra;
-  const h = HIT + 18;
+  const h = HIT + 22;
   return {
     left: (pad.x / SCENE_W) * sceneW - w / 2,
-    top: (pad.y / SCENE_H) * sceneH - h * 0.72,
+    top: (pad.y / SCENE_H) * sceneH - h * 0.7,
     width: w,
     height: h,
     zIndex: Math.round(pad.y) + 80,
@@ -87,7 +90,7 @@ export function VillageMap({
   onVaultPress,
 }: Props) {
   const { width } = useWindowDimensions();
-  const sceneW = Math.min(width - 8, 440);
+  const sceneW = Math.min(width - 16, 440);
   const sceneH = sceneW * (SCENE_H / SCENE_W);
 
   const vaultLayout = place(PADS.vault, VAULT_SIZE, sceneW, sceneH);
@@ -120,8 +123,8 @@ export function VillageMap({
         <Ellipse cx={CX} cy={CY + 22} rx="204" ry="104" fill="#2F6A34" />
         <Ellipse cx={CX} cy={CY + 4} rx="204" ry="104" fill="url(#discTop)" />
 
-        <Ellipse cx={CX} cy={CY} rx="118" ry="54" fill="none" stroke="#E8C45A" strokeWidth="4.5" />
-        <Ellipse cx={CX} cy={CY} rx="118" ry="54" fill="none" stroke="#FFE9A8" strokeWidth="1.6" opacity={0.75} />
+        <Ellipse cx={CX} cy={CY} rx="118" ry="54" fill="none" stroke={colors.vaultGold} strokeWidth="4.5" />
+        <Ellipse cx={CX} cy={CY} rx="118" ry="54" fill="none" stroke={colors.inkGoldBright} strokeWidth="1.6" opacity={0.75} />
 
         <Ellipse cx={CX} cy={CY - 28} rx="88" ry="68" fill="url(#vaultGlow)" />
 
@@ -137,7 +140,7 @@ export function VillageMap({
         <Text style={[styles.caption, { color: themeFor('vault').ink }]}>Main Vault</Text>
         <Text style={[styles.amount, { color: themeFor('vault').accent }]}>{formatEuro(vaultAmount)}</Text>
         {lockedAmount > 0 ? (
-          <Text style={[styles.amount, { color: themeFor('vault').ink, fontSize: 11 }]}>
+          <Text style={[styles.amount, styles.frozenAmt, { color: themeFor('vault').ink }]}>
             Frozen {formatEuro(lockedAmount, { cents: false })}
           </Text>
         ) : null}
@@ -174,28 +177,37 @@ const styles = StyleSheet.create({
   spot: {
     position: 'absolute',
     alignItems: 'center',
+    paddingHorizontal: 4,
   },
   hit: {
     position: 'absolute',
   },
   caption: {
-    marginTop: -8,
+    marginTop: -2,
+    maxWidth: '100%',
     fontFamily: type.bodyBold,
-    fontSize: 13,
-    color: '#FFF8E4',
+    fontSize: type.size.xs,
+    color: colors.inkGoldBright,
     textAlign: 'center',
+    letterSpacing: 0.15,
     textShadowColor: 'rgba(8, 14, 10, 0.95)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
   },
   amount: {
+    marginTop: 2,
+    maxWidth: '100%',
     fontFamily: type.mono,
-    fontSize: 13,
-    color: '#FFE9A8',
+    fontSize: type.size.xs,
+    color: colors.inkGold,
     textAlign: 'center',
     textShadowColor: 'rgba(8, 14, 10, 0.95)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
+  },
+  frozenAmt: {
+    fontSize: type.size.micro,
+    opacity: 0.9,
   },
   amountOverspent: {
     color: colors.coral500,

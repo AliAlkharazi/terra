@@ -4,7 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
 import { CategoryIcon } from '@/components/CategoryIcon';
-import { colors, space, type } from '@/theme/tokens';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { themeFor } from '@/theme/categoryTheme';
 import { formatEuro } from '@/theme/money';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -27,21 +29,22 @@ export function MoreScreen({ navigation }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
-          <Text style={styles.title}>Activity</Text>
-          <View style={styles.back} />
-        </View>
+        <ModalTopBar title="Activity" onBack={() => navigation.goBack()} />
 
         <View style={styles.bankBar}>
-          <TapButton style={styles.bankBtn} onPress={() => navigation.navigate('ConnectBank')}>
-            <Text style={styles.bankBtnText}>Connect Sparkasse</Text>
-          </TapButton>
-          <TapButton style={styles.bankBtnSecondary} onPress={() => navigation.navigate('BankInbox')}>
-            <Text style={styles.bankBtnSecondaryText}>Inbox</Text>
-          </TapButton>
+          <PrimaryButton
+            label="Connect Sparkasse"
+            variant="primary"
+            onPress={() => navigation.navigate('ConnectBank')}
+            style={styles.bankBtn}
+            textStyle={styles.bankBtnText}
+          />
+          <PrimaryButton
+            label="Inbox"
+            variant="secondary"
+            onPress={() => navigation.navigate('BankInbox')}
+            style={styles.bankBtnSecondary}
+          />
         </View>
 
         <FlatList
@@ -85,73 +88,51 @@ function ActivityRow({ item, labels }: { item: ActivityItem; labels: Record<stri
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: '#F4F1EA' },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-    paddingTop: space.xs,
-    marginBottom: space.sm,
-  },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.parchmentDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { fontSize: 18, color: colors.moss800 },
-  title: { fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
+  fill: { flex: 1, backgroundColor: colors.creamLift },
   bankBar: {
     flexDirection: 'row',
-    gap: 8,
+    gap: space.sm,
     paddingHorizontal: space.md,
-    marginBottom: space.sm,
+    marginBottom: space.group,
   },
-  bankBtn: {
-    flex: 1,
-    backgroundColor: colors.moss800,
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  bankBtnText: { fontFamily: type.bodyBold, color: colors.parchment, fontSize: 14 },
-  bankBtnSecondary: {
-    backgroundColor: colors.parchmentDim,
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bankBtnSecondaryText: { fontFamily: type.bodyBold, color: colors.moss900, fontSize: 14 },
+  bankBtn: { flex: 1, backgroundColor: colors.moss800, borderRadius: radius.md },
+  bankBtnText: { fontSize: type.size.sm },
+  bankBtnSecondary: { paddingHorizontal: space.lg, borderRadius: radius.md },
   list: { paddingHorizontal: space.md, paddingBottom: space.xl },
-  empty: { fontFamily: type.body, color: colors.textOnParchmentDim, textAlign: 'center', marginTop: 48 },
+  empty: {
+    fontFamily: type.body,
+    color: colors.textOnParchmentDim,
+    textAlign: 'center',
+    marginTop: space.xxl,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EDE8DC',
-    borderRadius: 18,
-    padding: 14,
-    marginBottom: 8,
-    gap: 10,
+    backgroundColor: colors.cream,
+    borderRadius: radius.card,
+    padding: space.group,
+    marginBottom: space.sm,
+    gap: space.group,
     borderLeftWidth: 4,
     overflow: 'hidden',
   },
   iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: layout.backSize,
+    height: layout.backSize,
+    borderRadius: layout.backSize / 2,
     backgroundColor: colors.parchment,
     alignItems: 'center',
     justifyContent: 'center',
   },
   body: { flex: 1 },
-  rowTitle: { fontFamily: type.bodyBold, fontSize: 15, color: colors.moss900 },
-  rowMeta: { fontFamily: type.body, fontSize: 12, color: colors.textOnParchmentDim, marginTop: 2 },
-  rowAmt: { fontFamily: type.mono, fontSize: 16 },
-  rowIn: { color: '#2F6A34' },
+  rowTitle: { fontFamily: type.bodyBold, fontSize: type.size.sm + 1, color: colors.moss900 },
+  rowMeta: {
+    fontFamily: type.body,
+    fontSize: type.size.xs,
+    color: colors.textOnParchmentDim,
+    marginTop: space.xs,
+  },
+  rowAmt: { fontFamily: type.mono, fontSize: type.size.base },
+  rowIn: { color: colors.moss600 },
   rowMove: { color: colors.moss800 },
 });

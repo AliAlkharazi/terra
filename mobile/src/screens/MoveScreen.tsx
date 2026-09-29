@@ -5,6 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
 import { MoneyKeypad, appendAmount } from '@/components/MoneyKeypad';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { ui } from '@/theme/ui';
 import { colors, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { CategoryIcon } from '@/components/CategoryIcon';
@@ -87,13 +90,7 @@ export function MoveScreen({ navigation, route }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
-          <Text style={styles.title}>Move money</Text>
-          <View style={styles.back} />
-        </View>
+        <ModalTopBar title="Move money" onBack={() => navigation.goBack()} />
 
         <View style={styles.cards}>
           <PocketCard
@@ -126,13 +123,13 @@ export function MoveScreen({ navigation, route }: Props) {
         </View>
 
         <View style={styles.bottom}>
-          <TapButton
-            style={[styles.moveBtn, canMove ? styles.moveReady : styles.moveDisabled]}
+          <PrimaryButton
+            label="Move"
+            variant={canMove ? 'primary' : 'secondary'}
             onPress={confirm}
             disabled={!canMove}
-          >
-            <Text style={[styles.moveText, canMove && styles.moveTextReady]}>Move</Text>
-          </TapButton>
+            style={!canMove ? styles.moveDisabled : undefined}
+          />
           <MoneyKeypad
             onDigit={(d) => setDigits((v) => appendAmount(v, d))}
             onBackspace={() => setDigits((v) => v.slice(0, -1))}
@@ -141,9 +138,9 @@ export function MoveScreen({ navigation, route }: Props) {
       </SafeAreaView>
 
       <Modal visible={picking != null} transparent animationType="fade" onRequestClose={() => setPicking(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setPicking(null)}>
-          <Pressable style={styles.sheet}>
-            <Text style={styles.sheetTitle}>{picking === 'top' ? 'Top' : 'Bottom'}</Text>
+        <Pressable style={ui.backdrop} onPress={() => setPicking(null)}>
+          <Pressable style={ui.sheet}>
+            <Text style={ui.sheetTitle}>{picking === 'top' ? 'Top' : 'Bottom'}</Text>
             {pockets.map((p) => (
               <TapButton key={p.id} style={styles.sheetRow} onPress={() => pick(p.id)}>
                 <CategoryIcon name={p.id === 'vault' ? 'vault' : p.id} size={20} color={themeFor(p.id).accent} />
@@ -186,34 +183,29 @@ function PocketCard({
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: '#F4F1EA' },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-    paddingTop: space.xs,
-  },
-  back: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.parchmentDim, alignItems: 'center', justifyContent: 'center' },
-  backText: { fontSize: 18, color: colors.moss800 },
-  title: { fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
-  cards: { flex: 1, paddingHorizontal: space.md, paddingTop: space.lg },
+  fill: { flex: 1, backgroundColor: colors.creamLift },
+  cards: { flex: 1, paddingHorizontal: space.md, paddingTop: space.lg, gap: 0 },
   card: {
-    backgroundColor: '#EDE8DC',
-    borderRadius: 22,
-    paddingHorizontal: 16,
-    paddingVertical: 18,
+    backgroundColor: colors.cream,
+    borderRadius: radius.panel,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group + 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderLeftWidth: 5,
+    borderLeftWidth: 4,
     overflow: 'hidden',
   },
-  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 },
-  cardName: { fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
-  cardBal: { fontFamily: type.body, fontSize: 12, color: colors.textOnParchmentDim, marginTop: 2 },
-  cardAmt: { fontFamily: type.mono, fontSize: 22, color: colors.moss800 },
-  arrowHit: { alignSelf: 'center', marginVertical: -16, zIndex: 2 },
+  cardLeft: { flexDirection: 'row', alignItems: 'center', gap: space.group, flex: 1 },
+  cardName: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
+  cardBal: {
+    fontFamily: type.body,
+    fontSize: type.size.xs,
+    color: colors.textOnParchmentDim,
+    marginTop: space.xs,
+  },
+  cardAmt: { fontFamily: type.mono, fontSize: type.size.lg, color: colors.moss800 },
+  arrowHit: { alignSelf: 'center', marginVertical: -space.md, zIndex: 2 },
   arrow: {
     width: 44,
     height: 44,
@@ -222,46 +214,27 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  arrowGlyph: { color: colors.parchment, fontSize: 20, fontFamily: type.bodyBold },
+  arrowGlyph: { color: colors.parchment, fontSize: type.size.lg, fontFamily: type.bodyBold },
   note: {
     marginTop: space.md,
-    backgroundColor: '#EDE8DC',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
+    backgroundColor: colors.cream,
+    borderRadius: radius.card,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group,
     fontFamily: type.body,
-    fontSize: 15,
+    fontSize: type.size.sm + 1,
     color: colors.moss900,
   },
   bottom: { paddingHorizontal: space.md, paddingBottom: space.md, gap: space.md },
-  moveBtn: {
-    backgroundColor: '#D8D3C8',
-    borderRadius: radius.pill,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  moveReady: { backgroundColor: colors.moss900 },
   moveDisabled: { opacity: 0.55 },
-  moveText: { fontFamily: type.bodyBold, fontSize: 17, color: colors.moss900 },
-  moveTextReady: { color: colors.parchment },
-  backdrop: { flex: 1, backgroundColor: 'rgba(12,18,14,0.45)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.parchment,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: space.lg,
-    paddingBottom: 36,
-    gap: 6,
-  },
-  sheetTitle: { fontFamily: type.display, fontSize: 22, color: colors.moss900, marginBottom: space.sm },
   sheetRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    paddingVertical: 12,
+    gap: space.group,
+    paddingVertical: space.group,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.parchmentDim,
   },
-  sheetName: { flex: 1, fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
-  sheetBal: { fontFamily: type.mono, fontSize: 14, color: colors.textOnParchmentDim },
+  sheetName: { flex: 1, fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
+  sheetBal: { fontFamily: type.mono, fontSize: type.size.sm, color: colors.textOnParchmentDim },
 });

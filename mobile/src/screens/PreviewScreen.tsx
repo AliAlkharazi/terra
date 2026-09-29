@@ -5,8 +5,10 @@ import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withDelay, with
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { CategoryIcon } from '@/components/CategoryIcon';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, gradients, radius, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import { themeFor } from '@/theme/categoryTheme';
 import { computeMonthPreview, monthShort, type UpcomingPayment } from '@/engine/preview';
@@ -45,19 +47,13 @@ export function PreviewScreen({ navigation }: Props) {
   const short = preview.endNext < 0;
 
   return (
-    <LinearGradient colors={['#141C12', '#101610', '#0C120E']} style={styles.fill}>
+    <LinearGradient colors={[...gradients.insights]} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
-          <Text style={styles.title}>Preview</Text>
-          <View style={styles.back} />
-        </View>
+        <ModalTopBar title="Preview" onBack={() => navigation.goBack()} tone="moss" />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeInDown.duration(320)} style={styles.hero}>
-            <Text style={styles.kicker}>
+            <Text style={ui.kickerOnMoss}>
               {preview.nextLabel}
               {preview.hasHistory ? ` · based on ${basis}` : ''}
             </Text>
@@ -78,9 +74,9 @@ export function PreviewScreen({ navigation }: Props) {
 
           <View style={styles.metrics}>
             <Metric label="Start" value={formatEuro(preview.startNext, { cents: false })} />
-            <Metric label="In" value={`+${formatEuro(preview.expectedIncome, { cents: false })}`} tint="#8BC34A" />
-            <Metric label="Out" value={`−${formatEuro(preview.expectedSpend, { cents: false })}`} tint="#E07A3A" />
-            <Metric label="End" value={formatEuro(preview.endNext, { cents: false })} tint={short ? colors.coral500 : '#FFE9A8'} />
+            <Metric label="In" value={`+${formatEuro(preview.expectedIncome, { cents: false })}`} tint={colors.incomeGreen} />
+            <Metric label="Out" value={`−${formatEuro(preview.expectedSpend, { cents: false })}`} tint={colors.outflowOrange} />
+            <Metric label="End" value={formatEuro(preview.endNext, { cents: false })} tint={short ? colors.coral500 : colors.inkGoldBright} />
           </View>
 
           <Text style={styles.section}>Upcoming payments</Text>
@@ -162,7 +158,11 @@ export function PreviewScreen({ navigation }: Props) {
 function PaymentRow({ payment, index }: { payment: UpcomingPayment; index: number }) {
   const date = new Date(payment.date);
   const tint =
-    payment.kind === 'income' ? '#8BC34A' : payment.kind === 'unlock' ? '#6BA3C9' : themeFor(payment.districtId ?? 'vault').accent;
+    payment.kind === 'income'
+      ? colors.incomeGreen
+      : payment.kind === 'unlock'
+        ? '#6BA3C9'
+        : themeFor(payment.districtId ?? 'vault').accent;
   const sign = payment.kind === 'bill' ? '−' : '+';
   return (
     <Animated.View entering={FadeInDown.delay(35 * index).springify().damping(16)} style={styles.row}>
@@ -233,34 +233,17 @@ function Metric({ label, value, tint }: { label: string; value: string; tint?: s
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   flex: { flex: 1 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-  },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(240,234,214,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { color: colors.parchment, fontSize: 18 },
-  title: { fontFamily: type.display, fontSize: 22, color: colors.parchment },
-  content: { padding: space.md, paddingBottom: space.xxl, gap: 6 },
+  content: { padding: space.md, paddingBottom: space.xxl, gap: space.sm },
   hero: { marginBottom: 6 },
-  kicker: { fontFamily: type.bodyBold, fontSize: 11, color: colors.gold500, letterSpacing: 1 },
-  headline: { fontFamily: type.display, fontSize: 24, color: colors.parchment, marginTop: 6, lineHeight: 30 },
-  sub: { fontFamily: type.body, fontSize: 14, color: colors.sage300, marginTop: 6 },
-  metrics: { flexDirection: 'row', gap: 6, marginVertical: 6 },
-  metric: { flex: 1, backgroundColor: 'rgba(240,234,214,0.07)', borderRadius: radius.md, paddingVertical: 10, paddingHorizontal: 8 },
-  metricLabel: { fontFamily: type.bodyBold, fontSize: 10, color: colors.sage300, letterSpacing: 0.4 },
-  metricValue: { fontFamily: type.display, fontSize: 16, color: colors.parchment, marginTop: 4 },
+  headline: { fontFamily: type.display, fontSize: type.size.lg + 4, color: colors.parchment, marginTop: 6, lineHeight: 30 },
+  sub: { fontFamily: type.body, fontSize: type.size.sm, color: colors.sage300, marginTop: 6 },
+  metrics: { flexDirection: 'row', gap: space.sm, marginVertical: space.sm },
+  metric: { flex: 1, ...ui.glassCard, paddingVertical: space.tight, paddingHorizontal: space.sm },
+  metricLabel: { fontFamily: type.bodyBold, fontSize: type.size.micro, color: colors.sage300, letterSpacing: 0.4 },
+  metricValue: { fontFamily: type.display, fontSize: type.size.base, color: colors.parchment, marginTop: 4 },
   section: {
     fontFamily: type.bodyBold,
-    fontSize: 11,
+    fontSize: type.size.micro,
     color: colors.sage300,
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -271,39 +254,37 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: 'rgba(240,234,214,0.07)',
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    gap: space.group,
+    ...ui.glassCard,
+    paddingHorizontal: space.group,
+    paddingVertical: space.tight,
   },
   dateChip: {
     width: 40,
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 3,
+    borderRadius: radius.sm,
+    paddingVertical: space.xs,
   },
   dateDay: { fontFamily: type.display, fontSize: 15, color: colors.parchment, lineHeight: 18 },
   dateMon: { fontFamily: type.bodyBold, fontSize: 9, color: colors.sage300, textTransform: 'uppercase' },
   rowLabel: { fontFamily: type.bodyBold, fontSize: 15, color: colors.parchment },
-  rowAmt: { fontFamily: type.mono, fontSize: 15, color: '#FFE9A8' },
+  rowAmt: { fontFamily: type.mono, fontSize: type.size.sm + 1, color: colors.inkGoldBright },
   empty: { fontFamily: type.body, fontSize: 13, color: colors.textOnMossDim, marginBottom: 8 },
   buildRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: 'rgba(240,234,214,0.07)',
-    borderRadius: 14,
-    padding: 12,
+    ...ui.glassCard,
+    padding: space.group,
   },
   buildLeft: { flex: 1 },
-  buildTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  buildTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   buildName: { fontFamily: type.bodyBold, fontSize: 15 },
   buildAmt: { fontFamily: type.display, fontSize: 20, color: colors.parchment, marginTop: 6 },
   trend: { fontFamily: type.bodyBold, fontSize: 15, color: colors.sage300 },
   buildMeta: { fontFamily: type.body, fontSize: 12, color: colors.sage300, marginTop: 2 },
   buildOver: { color: colors.coral500 },
-  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
+  bars: { flexDirection: 'row', alignItems: 'flex-end', gap: space.sm },
   barCol: { alignItems: 'center', width: 26 },
   barTrack: { height: BAR_MAX, justifyContent: 'flex-end' },
   bar: { width: 16, borderRadius: 5 },

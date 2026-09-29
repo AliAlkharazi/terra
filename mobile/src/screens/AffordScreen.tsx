@@ -6,10 +6,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { useSpendMemoryStore } from '@/store/spendMemoryStore';
 import { TapButton } from '@/components/TapButton';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { computeAffordability, type AffordVerdict } from '@/engine/afford';
 import { estimateMarketPrice } from '@/engine/estimatePrice';
 import { parseWant } from '@/engine/wantParse';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { colors, gradients, radius, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -64,21 +67,16 @@ export function AffordScreen({ navigation }: Props) {
     }
   };
 
-  const tone = verdict?.answer === 'yes' ? '#8BC34A' : verdict?.answer === 'no' ? '#D96C5F' : '#E8C45A';
+  const tone =
+    verdict?.answer === 'yes' ? colors.incomeGreen : verdict?.answer === 'no' ? colors.coral500 : colors.vaultGold;
   const word =
     verdict?.answer === 'yes' ? 'Yes' : verdict?.answer === 'no' ? 'No' : busy ? 'Checking…' : 'Need more';
 
   return (
-    <LinearGradient colors={['#141C12', '#101610', '#0C120E']} style={styles.fill}>
+    <LinearGradient colors={[...gradients.insights]} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
         <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.topBar}>
-            <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-              <Text style={styles.backText}>←</Text>
-            </TapButton>
-            <Text style={styles.title}>Can I buy this?</Text>
-            <View style={styles.back} />
-          </View>
+          <ModalTopBar title="Can I buy this?" onBack={() => navigation.goBack()} tone="moss" />
 
           <View style={styles.body}>
             <Text style={styles.lead}>Say it simply — it knows what things usually cost.</Text>
@@ -95,12 +93,16 @@ export function AffordScreen({ navigation }: Props) {
               autoFocus
               editable={!busy}
             />
-            <TapButton style={styles.go} onPress={() => void ask()} disabled={!text.trim() || busy}>
-              {busy ? <ActivityIndicator color={colors.moss900} /> : <Text style={styles.goText}>Ask</Text>}
-            </TapButton>
+            {busy ? (
+              <View style={styles.goBusy}>
+                <ActivityIndicator color={colors.moss900} />
+              </View>
+            ) : (
+              <PrimaryButton label="Ask" variant="ember" onPress={() => void ask()} disabled={!text.trim()} />
+            )}
 
             {verdict ? (
-              <View style={[styles.card, { borderColor: tone }]}>
+              <View style={[ui.glassCard, styles.card, { borderColor: tone }]}>
                 <Text style={[styles.word, { color: tone }]}>{word}</Text>
                 <Text style={styles.line}>{verdict.line}</Text>
                 {verdict.price != null ? (
@@ -128,51 +130,47 @@ export function AffordScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-  },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(240,234,214,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { color: colors.parchment, fontSize: 18 },
-  title: { fontFamily: type.display, fontSize: 20, color: colors.parchment },
   body: { flex: 1, padding: space.lg, gap: space.md },
   lead: { fontFamily: type.body, fontSize: 15, color: colors.sage300 },
   input: {
-    backgroundColor: 'rgba(240,234,214,0.1)',
-    borderRadius: 18,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    backgroundColor: colors.glassStrong,
+    borderRadius: radius.card,
+    paddingHorizontal: space.md,
+    paddingVertical: space.md,
     fontFamily: type.body,
-    fontSize: 18,
+    fontSize: type.size.md,
     color: colors.parchment,
   },
-  go: {
-    backgroundColor: colors.ember500,
-    borderRadius: radius.pill,
-    paddingVertical: 14,
+  goBusy: {
+    ...ui.emberBtn,
     alignItems: 'center',
-    minHeight: 50,
     justifyContent: 'center',
   },
-  goText: { fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
   card: {
     marginTop: space.md,
     borderWidth: 1.5,
-    borderRadius: 20,
+    borderRadius: radius.panel,
     padding: space.lg,
-    backgroundColor: 'rgba(240,234,214,0.06)',
   },
-  word: { fontFamily: type.display, fontSize: 40 },
-  line: { fontFamily: type.body, fontSize: 18, color: colors.parchment, marginTop: 8, lineHeight: 26 },
-  meta: { fontFamily: type.body, fontSize: 13, color: colors.sage300, marginTop: 12 },
-  hint: { fontFamily: type.body, fontSize: 14, color: colors.textOnMossDim, lineHeight: 20, marginTop: 8 },
+  word: { fontFamily: type.display, fontSize: type.size.display - 4 },
+  line: {
+    fontFamily: type.body,
+    fontSize: type.size.md,
+    color: colors.parchment,
+    marginTop: space.sm,
+    lineHeight: Math.round(type.size.md * type.line.snug),
+  },
+  meta: {
+    fontFamily: type.body,
+    fontSize: type.size.sm - 1,
+    color: colors.sage300,
+    marginTop: space.group,
+  },
+  hint: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnMossDim,
+    lineHeight: Math.round(type.size.sm * type.line.normal),
+    marginTop: space.sm,
+  },
 });

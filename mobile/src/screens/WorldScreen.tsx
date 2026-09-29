@@ -9,7 +9,8 @@ import { VillageMap } from '@/components/village/VillageMap';
 import { TapButton } from '@/components/TapButton';
 import { GoalAirplane } from '@/components/GoalAirplane';
 import { useCountUp } from '@/components/money/useCountUp';
-import { colors, healthColor, radius, space, type } from '@/theme/tokens';
+import { colors, gradients, healthColor, layout, radius, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import { computeInsights } from '@/engine/insights';
 import { lockedTotal } from '@/engine/locks';
@@ -111,7 +112,7 @@ export function WorldScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#3A4A22', '#1A2618', '#101610']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={styles.fill}>
+    <LinearGradient colors={[...gradients.world]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={styles.fill}>
       <View pointerEvents="none" style={styles.sunGlow} />
       <SafeAreaView style={styles.fill}>
         <View style={styles.header}>
@@ -122,9 +123,9 @@ export function WorldScreen({ navigation }: Props) {
               Vault {formatEuro(shownVault, { cents: false })} · Town {formatEuro(shownTown, { cents: false })}
               {locked > 0 ? ` · Frozen ${formatEuro(locked, { cents: false })}` : ''}
             </Text>
-            <View style={styles.healthChip}>
+            <View style={[ui.chipOnMoss, styles.healthChip]}>
               <View style={[styles.healthDot, { backgroundColor: healthColor(insights.health) }]} />
-              <Text style={styles.healthChipText}>
+              <Text style={ui.chipTextOnMoss}>
                 Insights {insights.health} · {insights.healthLabel}
               </Text>
             </View>
@@ -147,7 +148,7 @@ export function WorldScreen({ navigation }: Props) {
           />
         </View>
 
-        <View style={styles.dock}>
+        <View style={ui.dock}>
           <View style={styles.dockPrimary}>
             <TapButton style={styles.dockBtn} onPress={() => navigation.navigate('Deposit')} hoverScale={1.03}>
               <Text style={styles.dockBtnText}>Deposit</Text>
@@ -161,22 +162,22 @@ export function WorldScreen({ navigation }: Props) {
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockSecondary}>
-            <TapButton onPress={() => navigation.navigate('Lock')} pressedScale={0.96} hoverScale={1.04}>
+            <TapButton onPress={() => navigation.navigate('Lock')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
               <Text style={styles.dockLink}>Freeze</Text>
             </TapButton>
             <Text style={styles.dockDot}>·</Text>
-            <TapButton onPress={() => navigation.navigate('Preview')} pressedScale={0.96} hoverScale={1.04}>
+            <TapButton onPress={() => navigation.navigate('Preview')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
               <Text style={styles.dockLink}>Preview</Text>
             </TapButton>
             <Text style={styles.dockDot}>·</Text>
-            <TapButton onPress={() => navigation.navigate('Afford')} pressedScale={0.96} hoverScale={1.04}>
+            <TapButton onPress={() => navigation.navigate('Afford')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
               <Text style={styles.dockLink}>Ask</Text>
             </TapButton>
           </View>
         </View>
 
         <TapButton style={styles.account} onPress={openAccount} pressedScale={0.92}>
-          <Text style={styles.accountText}>{mode === 'synced' ? 'Account' : 'Offline'}</Text>
+          <Text style={[ui.chipTextOnMoss, styles.accountText]}>{mode === 'synced' ? 'Account' : 'Offline'}</Text>
         </TapButton>
       </SafeAreaView>
     </LinearGradient>
@@ -186,15 +187,12 @@ export function WorldScreen({ navigation }: Props) {
 function GoalsLaunch({ onOpen, focused }: { onOpen: () => void; focused: boolean }) {
   const x = useSharedValue(0);
   const y = useSharedValue(0);
-  const rot = useSharedValue(18);
   const fade = useSharedValue(1);
   const bob = useSharedValue(0);
-  const tug = useSharedValue(0);
   const flying = useRef(false);
 
   const startIdle = () => {
-    bob.value = withRepeat(withTiming(-5, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true);
-    tug.value = withRepeat(withTiming(8, { duration: 2200, easing: Easing.inOut(Easing.sin) }), -1, true);
+    bob.value = withRepeat(withTiming(-3, { duration: 1800, easing: Easing.inOut(Easing.sin) }), -1, true);
   };
 
   useEffect(() => {
@@ -206,7 +204,6 @@ function GoalsLaunch({ onOpen, focused }: { onOpen: () => void; focused: boolean
     flying.current = false;
     x.value = 0;
     y.value = 0;
-    rot.value = 18;
     fade.value = 1;
     startIdle();
   }, [focused]);
@@ -215,29 +212,27 @@ function GoalsLaunch({ onOpen, focused }: { onOpen: () => void; focused: boolean
     if (flying.current) return;
     flying.current = true;
     bob.value = withTiming(0, { duration: 80 });
-    tug.value = withTiming(0, { duration: 80 });
-    x.value = withTiming(160, { duration: 520, easing: Easing.in(Easing.cubic) });
-    y.value = withTiming(-40, { duration: 520, easing: Easing.out(Easing.cubic) });
-    rot.value = withTiming(8, { duration: 520 });
-    fade.value = withTiming(0, { duration: 420 }, (finished) => {
+    // Stay level (0°) — slide up/out, no tilt
+    x.value = withTiming(28, { duration: 420, easing: Easing.in(Easing.cubic) });
+    y.value = withTiming(-36, { duration: 420, easing: Easing.out(Easing.cubic) });
+    fade.value = withTiming(0, { duration: 360 }, (finished) => {
       if (finished) runOnJS(onOpen)();
     });
   };
 
   const planeStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: x.value + tug.value },
+      { translateX: x.value },
       { translateY: y.value + bob.value },
-      { rotate: `${rot.value}deg` },
     ],
     opacity: fade.value,
   }));
 
   return (
-    <TapButton onPress={takeOff} style={styles.goals} pressedScale={0.98}>
+    <TapButton onPress={takeOff} style={styles.goals} pressedScale={0.96} hoverScale={1.03}>
       <Animated.View style={[styles.goalsInner, planeStyle]}>
         <Text style={styles.goalsLabel}>Goals</Text>
-        <GoalAirplane size={108} />
+        <GoalAirplane size={52} />
       </Animated.View>
     </TapButton>
   );
@@ -252,72 +247,85 @@ const styles = StyleSheet.create({
     width: 280,
     height: 280,
     borderRadius: 140,
-    backgroundColor: 'rgba(232, 176, 72, 0.2)',
+    backgroundColor: colors.sunGlow,
   },
-  header: { alignItems: 'center', paddingTop: space.sm, paddingHorizontal: space.lg },
-  headerTap: { alignItems: 'center' },
-  eyebrow: { fontFamily: type.bodyBold, fontSize: type.size.xs, color: colors.sage300, letterSpacing: 1.2 },
+  header: {
+    alignItems: 'center',
+    paddingTop: space.sm,
+    paddingHorizontal: space.lg,
+    gap: space.xs,
+  },
+  headerTap: { alignItems: 'center', gap: space.xs },
+  eyebrow: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.xs,
+    color: colors.sage300,
+    letterSpacing: 1.2,
+  },
   total: {
     fontFamily: type.display,
-    fontSize: 40,
-    color: '#F4E6A8',
-    marginTop: 2,
+    fontSize: type.size.display - 4,
+    color: colors.inkGold,
     textShadowColor: 'rgba(0,0,0,0.25)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 6,
   },
-  totalLabel: { fontFamily: type.body, fontSize: type.size.sm, color: colors.parchment, opacity: 0.85, marginTop: 2 },
-  healthChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 6,
-    marginTop: 8,
-    backgroundColor: 'rgba(18,40,26,0.55)',
-    borderRadius: radius.pill,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+  totalLabel: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.parchment,
+    opacity: 0.88,
+    textAlign: 'center',
+    lineHeight: Math.round(type.size.sm * type.line.snug),
   },
-  healthDot: { width: 7, height: 7, borderRadius: 4 },
-  healthChipText: { fontFamily: type.bodyBold, fontSize: 11, color: colors.parchment, letterSpacing: 0.3 },
-  status: { fontFamily: type.body, fontSize: type.size.xs, color: colors.gold500, marginTop: space.xs },
-  mapWrap: { flex: 1, justifyContent: 'center' },
+  healthChip: {
+    alignSelf: 'center',
+    marginTop: space.xs,
+  },
+  healthDot: { width: 8, height: 8, borderRadius: 4 },
+  status: {
+    fontFamily: type.body,
+    fontSize: type.size.xs,
+    color: colors.gold500,
+    marginTop: space.xs,
+  },
+  mapWrap: { flex: 1, justifyContent: 'center', paddingVertical: space.sm },
   skyLane: {
-    height: 88,
-    marginTop: 4,
+    height: 64,
+    marginTop: space.xs,
     zIndex: 6,
     overflow: 'visible',
   },
   goals: {
     position: 'absolute',
-    right: -78,
-    top: 4,
-    width: 188,
+    right: space.md,
+    top: 0,
+    minHeight: layout.hitTarget,
+    justifyContent: 'center',
   },
   goalsInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
-  },
-  dock: {
-    marginHorizontal: space.md,
-    marginBottom: space.md,
-    backgroundColor: 'rgba(12, 18, 14, 0.72)',
-    borderRadius: 22,
+    gap: space.sm,
+    backgroundColor: colors.glassInk,
+    borderRadius: radius.pill,
     borderWidth: 1,
-    borderColor: 'rgba(240,234,214,0.1)',
-    padding: 10,
-    gap: 10,
+    borderColor: colors.hairline,
+    paddingLeft: space.md,
+    paddingRight: space.group,
+    paddingVertical: space.sm,
+    minHeight: layout.hitTarget,
   },
   dockPrimary: {
     flexDirection: 'row',
-    gap: 8,
+    gap: space.sm,
   },
   dockBtn: {
     flex: 1,
-    backgroundColor: 'rgba(240,234,214,0.1)',
-    borderRadius: 14,
-    paddingVertical: 13,
+    backgroundColor: colors.glassStrong,
+    borderRadius: radius.md,
+    paddingVertical: space.group,
+    minHeight: layout.hitTarget,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -326,7 +334,7 @@ const styles = StyleSheet.create({
   },
   dockBtnText: {
     fontFamily: type.bodyBold,
-    fontSize: 14,
+    fontSize: type.size.base,
     color: colors.parchment,
   },
   dockBtnMainText: {
@@ -334,45 +342,53 @@ const styles = StyleSheet.create({
   },
   dockDivider: {
     height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(240,234,214,0.12)',
-    marginHorizontal: 4,
+    backgroundColor: colors.hairline,
+    marginHorizontal: space.xs,
   },
   dockSecondary: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 14,
-    paddingVertical: 2,
+    gap: space.group,
+    paddingVertical: space.xs,
+  },
+  dockLinkHit: {
+    minHeight: layout.hitTarget,
+    justifyContent: 'center',
+    paddingHorizontal: space.sm,
   },
   dockLink: {
     fontFamily: type.bodyBold,
-    fontSize: 13,
-    color: '#F4E6A8',
+    fontSize: type.size.sm,
+    color: colors.inkGold,
     letterSpacing: 0.2,
   },
   dockDot: {
     fontFamily: type.body,
-    fontSize: 13,
-    color: 'rgba(240,234,214,0.28)',
+    fontSize: type.size.sm,
+    color: colors.dimOnMoss,
   },
-  account: { position: 'absolute', top: 54, left: space.md },
+  account: {
+    position: 'absolute',
+    top: 56,
+    left: space.md,
+    zIndex: 8,
+    minHeight: layout.hitTarget - 4,
+    justifyContent: 'center',
+  },
   accountText: {
-    fontFamily: type.bodyBold,
-    fontSize: 11,
-    color: colors.parchment,
-    backgroundColor: 'rgba(18,40,26,0.55)',
+    backgroundColor: colors.glassInk,
     overflow: 'hidden',
     borderRadius: radius.pill,
-    paddingHorizontal: space.sm,
-    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    paddingHorizontal: space.md,
+    paddingVertical: space.sm,
   },
   goalsLabel: {
     fontFamily: type.bodyBold,
-    fontSize: 12,
-    color: colors.parchment,
-    textShadowColor: 'rgba(10,18,12,0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-    width: 44,
+    fontSize: type.size.sm,
+    color: colors.inkGoldBright,
+    letterSpacing: 0.3,
   },
 });

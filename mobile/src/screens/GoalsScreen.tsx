@@ -3,8 +3,11 @@ import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-nativ
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { TapButton } from '@/components/TapButton';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { useGoalsStore } from '@/store/goalsStore';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { colors, gradients, layout, radius, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -27,15 +30,9 @@ export function GoalsScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#2A3A1C', '#141C12', '#0C120E']} style={styles.fill}>
+    <LinearGradient colors={[...gradients.goals]} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
-          <Text style={styles.title}>Goals</Text>
-          <View style={styles.back} />
-        </View>
+        <ModalTopBar title="Goals" onBack={() => navigation.goBack()} tone="moss" />
 
         {goals.length === 0 ? (
           <View style={styles.empty}>
@@ -64,11 +61,11 @@ export function GoalsScreen({ navigation }: Props) {
       </SafeAreaView>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet} onPress={() => undefined}>
-            <Text style={styles.sheetTitle}>New goal</Text>
+        <Pressable style={ui.backdrop} onPress={() => setOpen(false)}>
+          <Pressable style={ui.sheet} onPress={() => undefined}>
+            <Text style={ui.sheetTitle}>New goal</Text>
             <TextInput
-              style={styles.input}
+              style={ui.input}
               placeholder="Name"
               placeholderTextColor={colors.textOnParchmentDim}
               value={name}
@@ -84,9 +81,7 @@ export function GoalsScreen({ navigation }: Props) {
                 </TapButton>
               ))}
             </View>
-            <TapButton style={styles.save} onPress={save} disabled={!name.trim()}>
-              <Text style={styles.saveText}>Add</Text>
-            </TapButton>
+            <PrimaryButton label="Add" variant="primary" onPress={save} disabled={!name.trim()} style={styles.save} />
           </Pressable>
         </Pressable>
       </Modal>
@@ -96,87 +91,56 @@ export function GoalsScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-    paddingTop: space.xs,
-  },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(240,234,214,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { color: colors.parchment, fontSize: 18 },
-  title: { fontFamily: type.display, fontSize: 22, color: colors.parchment },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: space.md },
   plus: {
     width: 72,
     height: 72,
     borderRadius: 36,
     borderWidth: 1.5,
-    borderColor: 'rgba(244,230,168,0.55)',
+    borderColor: colors.goldBorder,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(240,234,214,0.06)',
+    backgroundColor: colors.glass,
   },
-  plusMark: { fontSize: 40, color: '#F4E6A8', marginTop: -2, fontFamily: type.body },
-  hint: { fontFamily: type.body, fontSize: 14, color: colors.sage300 },
-  list: { padding: space.lg, gap: space.sm, flex: 1 },
+  plusMark: { fontSize: 40, color: colors.inkGold, marginTop: -2, fontFamily: type.body },
+  hint: { fontFamily: type.body, fontSize: type.size.sm, color: colors.sage300 },
+  list: { paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.group, flex: 1 },
   card: {
-    backgroundColor: 'rgba(240,234,214,0.1)',
-    borderRadius: radius.md,
+    backgroundColor: colors.glassStrong,
+    borderRadius: radius.card,
     padding: space.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
   },
-  cardName: { fontFamily: type.bodyBold, fontSize: 16, color: colors.parchment },
-  cardMeta: { fontFamily: type.body, fontSize: 13, color: colors.sage300, marginTop: 4 },
+  cardName: { fontFamily: type.bodyBold, fontSize: type.size.md, color: colors.parchment },
+  cardMeta: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.sage300,
+    marginTop: space.xs,
+  },
   plusSmall: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: layout.hitTarget,
+    height: layout.hitTarget,
+    borderRadius: layout.hitTarget / 2,
     borderWidth: 1.5,
-    borderColor: 'rgba(244,230,168,0.55)',
+    borderColor: colors.goldBorder,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
     marginTop: space.md,
+    backgroundColor: colors.glass,
   },
-  plusMarkSmall: { fontSize: 28, color: '#F4E6A8', marginTop: -2 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(8,12,8,0.55)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.parchment,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: space.lg,
-    paddingBottom: 40,
-  },
-  sheetTitle: { fontFamily: type.display, fontSize: 22, color: colors.moss900, marginBottom: space.md },
-  input: {
-    fontFamily: type.bodyBold,
-    fontSize: 18,
-    color: colors.moss900,
-    borderBottomWidth: 1.5,
-    borderBottomColor: colors.moss700,
-    paddingVertical: space.sm,
-  },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: space.md },
+  plusMarkSmall: { fontSize: type.size.xl, color: colors.inkGold, marginTop: -2 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.md },
   chip: {
     backgroundColor: colors.parchmentDim,
     borderRadius: radius.pill,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: space.group,
+    paddingVertical: space.sm,
+    minHeight: 36,
+    justifyContent: 'center',
   },
-  chipText: { fontFamily: type.body, fontSize: 13, color: colors.moss800 },
-  save: {
-    marginTop: space.lg,
-    backgroundColor: colors.moss900,
-    borderRadius: radius.pill,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  saveText: { fontFamily: type.bodyBold, fontSize: 16, color: colors.parchment },
+  chipText: { fontFamily: type.body, fontSize: type.size.sm, color: colors.moss800 },
+  save: { marginTop: space.lg },
 });

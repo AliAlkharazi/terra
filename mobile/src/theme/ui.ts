@@ -1,0 +1,334 @@
+import { StyleSheet } from 'react-native';
+import { colors, layout, radius, shadow, space, type } from './tokens';
+
+/**
+ * Shared StyleSheet fragments — import and compose in screens.
+ */
+export const ui = StyleSheet.create({
+  fill: { flex: 1 },
+  fillMoss: { flex: 1, backgroundColor: colors.moss800 },
+  fillMossDeep: { flex: 1, backgroundColor: colors.moss900 },
+  fillParchment: { flex: 1, backgroundColor: colors.parchment },
+
+  screenPad: {
+    paddingHorizontal: layout.screenPad,
+  },
+  screenPadLg: {
+    paddingHorizontal: layout.screenPadLg,
+  },
+
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rowBetween: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  backBtn: {
+    width: layout.backSize,
+    height: layout.backSize,
+    borderRadius: layout.backSize / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cream,
+  },
+  backBtnOnMoss: {
+    width: layout.backSize,
+    height: layout.backSize,
+    borderRadius: layout.backSize / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.glassInk,
+  },
+  backGlyph: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.lg,
+    color: colors.moss900,
+    lineHeight: type.size.lg,
+  },
+  backGlyphOnMoss: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.lg,
+    color: colors.parchment,
+    lineHeight: type.size.lg,
+  },
+
+  title: {
+    fontFamily: type.display,
+    fontSize: type.size.xxl,
+    color: colors.textOnParchment,
+  },
+  titleOnMoss: {
+    fontFamily: type.display,
+    fontSize: type.size.xxl,
+    color: colors.textOnMoss,
+  },
+  subtitle: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnParchmentDim,
+    marginTop: space.xs,
+    lineHeight: Math.round(type.size.sm * type.line.normal),
+  },
+  subtitleOnMoss: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnMossDim,
+    marginTop: space.xs,
+    lineHeight: Math.round(type.size.sm * type.line.normal),
+  },
+  sectionLabel: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.xs,
+    color: colors.textOnParchmentDim,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  kicker: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.micro,
+    color: colors.gold500,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  kickerOnMoss: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.micro,
+    color: colors.gold500,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+
+  amountHero: {
+    fontFamily: type.display,
+    fontSize: type.size.hero,
+    color: colors.parchment,
+    textAlign: 'center',
+  },
+  amountHeroDim: {
+    color: colors.dimOnMoss,
+  },
+  amountGold: {
+    fontFamily: type.mono,
+    fontSize: type.size.base,
+    color: colors.inkGoldBright,
+  },
+
+  card: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.card,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group,
+    ...shadow.soft,
+  },
+  cardFlat: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.card,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group,
+  },
+  glassCard: {
+    backgroundColor: colors.glass,
+    borderRadius: radius.card,
+    padding: space.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  glassCardStrong: {
+    backgroundColor: colors.glassStrong,
+    borderRadius: radius.card,
+    padding: space.md,
+    borderWidth: 1,
+    borderColor: colors.goldBorder,
+  },
+  listRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.group,
+    paddingVertical: space.group,
+    paddingHorizontal: space.md,
+    backgroundColor: colors.creamLift,
+    borderRadius: radius.card,
+    marginBottom: space.sm,
+    minHeight: layout.hitTarget,
+  },
+
+  primaryBtn: {
+    backgroundColor: colors.moss900,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: layout.hitTarget,
+  },
+  primaryBtnText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.md,
+    color: colors.parchment,
+  },
+  secondaryBtn: {
+    backgroundColor: colors.cream,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: layout.hitTarget,
+  },
+  secondaryBtnText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.md,
+    color: colors.moss900,
+  },
+  emberBtn: {
+    backgroundColor: colors.ember500,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: layout.hitTarget,
+  },
+  emberBtnText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.md,
+    color: colors.moss900,
+  },
+  parchmentBtn: {
+    backgroundColor: colors.parchment,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: layout.hitTarget,
+  },
+  parchmentBtnText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.md,
+    color: colors.moss900,
+  },
+  ghostBtnOnMoss: {
+    backgroundColor: colors.glassStrong,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: layout.hitTarget,
+  },
+  ghostBtnOnMossText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.md,
+    color: colors.parchment,
+  },
+  linkBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: space.sm,
+    minHeight: layout.hitTarget - 8,
+  },
+  linkText: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnParchmentDim,
+  },
+  linkTextOnMoss: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnMossDim,
+  },
+
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    backgroundColor: colors.cream,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.group,
+    paddingVertical: space.sm,
+    minHeight: 36,
+  },
+  chipOnMoss: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.sm,
+    backgroundColor: colors.glassInk,
+    borderRadius: radius.pill,
+    paddingHorizontal: space.group,
+    paddingVertical: space.xs,
+    minHeight: 32,
+  },
+  chipText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.sm,
+    color: colors.moss900,
+  },
+  chipTextOnMoss: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.xs,
+    color: colors.parchment,
+    letterSpacing: 0.3,
+  },
+
+  input: {
+    fontFamily: type.body,
+    fontSize: type.size.base,
+    color: colors.textOnParchment,
+    backgroundColor: colors.creamLift,
+    borderRadius: radius.md,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group,
+    borderWidth: 1,
+    borderColor: colors.parchmentDim,
+    minHeight: layout.hitTarget,
+  },
+
+  sheet: {
+    backgroundColor: colors.parchment,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
+    padding: space.lg,
+    paddingBottom: layout.listBottom,
+    gap: space.sm,
+  },
+  sheetTitle: {
+    fontFamily: type.display,
+    fontSize: type.size.xl,
+    color: colors.moss900,
+    marginBottom: space.sm,
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: colors.backdrop,
+    justifyContent: 'flex-end',
+  },
+
+  dock: {
+    marginHorizontal: space.md,
+    marginBottom: space.md,
+    backgroundColor: colors.dockBg,
+    borderRadius: radius.panel,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    padding: space.tight,
+    gap: space.tight,
+    ...shadow.dock,
+  },
+
+  /** Shared top chrome padding for custom bars (matches ModalTopBar) */
+  modalTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: layout.screenPad,
+    paddingTop: space.md,
+    paddingBottom: space.group,
+    marginBottom: space.sm,
+    minHeight: layout.hitTarget + space.md + space.group,
+  },
+});
