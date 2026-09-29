@@ -6,8 +6,10 @@ import * as Haptics from 'expo-haptics';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
 import { BackButton } from '@/components/ui/BackButton';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { ui } from '@/theme/ui';
 import { MoneyKeypad, appendAmount } from '@/components/MoneyKeypad';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { lockedTotal } from '@/engine/locks';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -46,8 +48,8 @@ export function LockScreen({ navigation }: Props) {
         <BackButton onPress={() => navigation.goBack()} tone="moss" style={styles.close} />
 
         <View style={styles.hero}>
-          <Text style={styles.kicker}>Freeze</Text>
-          <Text style={[styles.amount, amount === 0 && styles.amountDim]}>€{amount || 0}</Text>
+          <Text style={ui.kickerOnMoss}>Freeze</Text>
+          <Text style={[ui.amountHero, amount === 0 && ui.amountHeroDim]}>€{amount || 0}</Text>
           <Text style={styles.free}>
             {formatEuro(vault, { cents: false })} free
             {alreadyLocked > 0 ? ` · ${formatEuro(alreadyLocked, { cents: false })} already frozen` : ''}
@@ -86,9 +88,13 @@ export function LockScreen({ navigation }: Props) {
                 <TapButton style={styles.step} onPress={() => setCustomDays((d) => d + 1)}>
                   <Text style={styles.stepText}>+</Text>
                 </TapButton>
-                <TapButton style={styles.lockNow} onPress={() => lockFor(customDays)} disabled={!canLock}>
-                  <Text style={styles.lockNowText}>Freeze</Text>
-                </TapButton>
+                <PrimaryButton
+                  label="Freeze"
+                  variant="ember"
+                  onPress={() => lockFor(customDays)}
+                  disabled={!canLock}
+                  style={styles.lockNow}
+                />
               </Animated.View>
             ) : null}
           </Animated.View>
@@ -116,19 +122,6 @@ const styles = StyleSheet.create({
     marginTop: space.xs,
   },
   hero: { alignItems: 'center', paddingTop: space.group, gap: space.xs },
-  kicker: {
-    fontFamily: type.bodyBold,
-    fontSize: type.size.xs,
-    color: colors.gold500,
-    letterSpacing: 1.2,
-  },
-  amount: {
-    fontFamily: type.display,
-    fontSize: 56,
-    color: colors.parchment,
-    marginTop: space.xs,
-  },
-  amountDim: { color: colors.dimOnMoss },
   free: {
     fontFamily: type.body,
     fontSize: type.size.sm,
@@ -165,7 +158,7 @@ const styles = StyleSheet.create({
     paddingVertical: space.group,
     borderWidth: 1,
     borderColor: colors.goldBorder,
-    minHeight: 44,
+    minHeight: layout.hitTarget,
     justifyContent: 'center',
   },
   chipOn: { backgroundColor: colors.ember500, borderColor: colors.ember500 },
@@ -195,14 +188,6 @@ const styles = StyleSheet.create({
     minWidth: 78,
     textAlign: 'center',
   },
-  lockNow: {
-    backgroundColor: colors.ember500,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.group + 4,
-    paddingVertical: space.tight,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  lockNowText: { fontFamily: type.bodyBold, fontSize: type.size.sm + 1, color: colors.moss900 },
+  lockNow: { paddingHorizontal: space.group + 4 },
   bottom: { marginTop: 'auto', paddingHorizontal: space.md, paddingBottom: space.md },
 });

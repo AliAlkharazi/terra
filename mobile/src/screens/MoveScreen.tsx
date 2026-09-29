@@ -6,6 +6,8 @@ import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
 import { MoneyKeypad, appendAmount } from '@/components/MoneyKeypad';
 import { ModalTopBar } from '@/components/ui/ModalTopBar';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { ui } from '@/theme/ui';
 import { colors, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { CategoryIcon } from '@/components/CategoryIcon';
@@ -121,13 +123,13 @@ export function MoveScreen({ navigation, route }: Props) {
         </View>
 
         <View style={styles.bottom}>
-          <TapButton
-            style={[styles.moveBtn, canMove ? styles.moveReady : styles.moveDisabled]}
+          <PrimaryButton
+            label="Move"
+            variant={canMove ? 'primary' : 'secondary'}
             onPress={confirm}
             disabled={!canMove}
-          >
-            <Text style={[styles.moveText, canMove && styles.moveTextReady]}>Move</Text>
-          </TapButton>
+            style={!canMove ? styles.moveDisabled : undefined}
+          />
           <MoneyKeypad
             onDigit={(d) => setDigits((v) => appendAmount(v, d))}
             onBackspace={() => setDigits((v) => v.slice(0, -1))}
@@ -136,9 +138,9 @@ export function MoveScreen({ navigation, route }: Props) {
       </SafeAreaView>
 
       <Modal visible={picking != null} transparent animationType="fade" onRequestClose={() => setPicking(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setPicking(null)}>
-          <Pressable style={styles.sheet}>
-            <Text style={styles.sheetTitle}>{picking === 'top' ? 'Top' : 'Bottom'}</Text>
+        <Pressable style={ui.backdrop} onPress={() => setPicking(null)}>
+          <Pressable style={ui.sheet}>
+            <Text style={ui.sheetTitle}>{picking === 'top' ? 'Top' : 'Bottom'}</Text>
             {pockets.map((p) => (
               <TapButton key={p.id} style={styles.sheetRow} onPress={() => pick(p.id)}>
                 <CategoryIcon name={p.id === 'vault' ? 'vault' : p.id} size={20} color={themeFor(p.id).accent} />
@@ -224,33 +226,7 @@ const styles = StyleSheet.create({
     color: colors.moss900,
   },
   bottom: { paddingHorizontal: space.md, paddingBottom: space.md, gap: space.md },
-  moveBtn: {
-    backgroundColor: colors.parchmentDim,
-    borderRadius: radius.pill,
-    paddingVertical: space.md,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  moveReady: { backgroundColor: colors.moss900 },
   moveDisabled: { opacity: 0.55 },
-  moveText: { fontFamily: type.bodyBold, fontSize: type.size.md, color: colors.moss900 },
-  moveTextReady: { color: colors.parchment },
-  backdrop: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.parchment,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    padding: space.lg,
-    paddingBottom: 40,
-    gap: space.sm,
-  },
-  sheetTitle: {
-    fontFamily: type.display,
-    fontSize: type.size.xl - 4,
-    color: colors.moss900,
-    marginBottom: space.sm,
-  },
   sheetRow: {
     flexDirection: 'row',
     alignItems: 'center',

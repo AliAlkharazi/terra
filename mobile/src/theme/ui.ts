@@ -7,6 +7,7 @@ import { colors, layout, radius, shadow, space, type } from './tokens';
 export const ui = StyleSheet.create({
   fill: { flex: 1 },
   fillMoss: { flex: 1, backgroundColor: colors.moss800 },
+  fillMossDeep: { flex: 1, backgroundColor: colors.moss900 },
   fillParchment: { flex: 1, backgroundColor: colors.parchment },
 
   screenPad: {
@@ -33,6 +34,8 @@ export const ui = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cream,
+    minWidth: layout.hitTarget,
+    minHeight: layout.hitTarget,
   },
   backBtnOnMoss: {
     width: layout.backSize,
@@ -41,6 +44,8 @@ export const ui = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.glassInk,
+    minWidth: layout.hitTarget,
+    minHeight: layout.hitTarget,
   },
   backGlyph: {
     fontFamily: type.bodyBold,
@@ -86,6 +91,35 @@ export const ui = StyleSheet.create({
     letterSpacing: 0.8,
     textTransform: 'uppercase',
   },
+  kicker: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.micro,
+    color: colors.gold500,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  kickerOnMoss: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.micro,
+    color: colors.gold500,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+
+  amountHero: {
+    fontFamily: type.display,
+    fontSize: type.size.hero,
+    color: colors.parchment,
+    textAlign: 'center',
+  },
+  amountHeroDim: {
+    color: colors.dimOnMoss,
+  },
+  amountGold: {
+    fontFamily: type.mono,
+    fontSize: type.size.base,
+    color: colors.inkGoldBright,
+  },
 
   card: {
     backgroundColor: colors.cream,
@@ -100,6 +134,20 @@ export const ui = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingVertical: space.group,
   },
+  glassCard: {
+    backgroundColor: colors.glass,
+    borderRadius: radius.card,
+    padding: space.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+  },
+  glassCardStrong: {
+    backgroundColor: colors.glassStrong,
+    borderRadius: radius.card,
+    padding: space.md,
+    borderWidth: 1,
+    borderColor: colors.goldBorder,
+  },
   listRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -109,12 +157,14 @@ export const ui = StyleSheet.create({
     backgroundColor: colors.creamLift,
     borderRadius: radius.card,
     marginBottom: space.sm,
+    minHeight: layout.hitTarget,
   },
 
   primaryBtn: {
     backgroundColor: colors.moss900,
     borderRadius: radius.pill,
     paddingVertical: space.md,
+    paddingHorizontal: space.lg,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: layout.hitTarget,
@@ -128,6 +178,7 @@ export const ui = StyleSheet.create({
     backgroundColor: colors.cream,
     borderRadius: radius.pill,
     paddingVertical: space.md,
+    paddingHorizontal: space.lg,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: layout.hitTarget,
@@ -141,6 +192,7 @@ export const ui = StyleSheet.create({
     backgroundColor: colors.ember500,
     borderRadius: radius.pill,
     paddingVertical: space.md,
+    paddingHorizontal: space.lg,
     alignItems: 'center',
     justifyContent: 'center',
     minHeight: layout.hitTarget,
@@ -149,6 +201,50 @@ export const ui = StyleSheet.create({
     fontFamily: type.bodyBold,
     fontSize: type.size.md,
     color: colors.moss900,
+  },
+  parchmentBtn: {
+    backgroundColor: colors.parchment,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: layout.hitTarget,
+  },
+  parchmentBtnText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.md,
+    color: colors.moss900,
+  },
+  ghostBtnOnMoss: {
+    backgroundColor: colors.glassStrong,
+    borderRadius: radius.pill,
+    paddingVertical: space.md,
+    paddingHorizontal: space.lg,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: layout.hitTarget,
+  },
+  ghostBtnOnMossText: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.md,
+    color: colors.parchment,
+  },
+  linkBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: space.sm,
+    minHeight: layout.hitTarget - 8,
+  },
+  linkText: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnParchmentDim,
+  },
+  linkTextOnMoss: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnMossDim,
   },
 
   chip: {
@@ -159,6 +255,7 @@ export const ui = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: space.group,
     paddingVertical: space.sm,
+    minHeight: 36,
   },
   chipOnMoss: {
     flexDirection: 'row',
@@ -168,6 +265,7 @@ export const ui = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: space.group,
     paddingVertical: space.xs,
+    minHeight: 32,
   },
   chipText: {
     fontFamily: type.bodyBold,
@@ -191,6 +289,7 @@ export const ui = StyleSheet.create({
     paddingVertical: space.group,
     borderWidth: 1,
     borderColor: colors.parchmentDim,
+    minHeight: layout.hitTarget,
   },
 
   sheet: {
@@ -206,6 +305,11 @@ export const ui = StyleSheet.create({
     fontSize: type.size.xl,
     color: colors.moss900,
     marginBottom: space.sm,
+  },
+  backdrop: {
+    flex: 1,
+    backgroundColor: colors.backdrop,
+    justifyContent: 'flex-end',
   },
 
   dock: {

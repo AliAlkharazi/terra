@@ -3,8 +3,9 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { CategoryIcon } from '@/components/CategoryIcon';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { DistrictId } from '@/types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -103,9 +104,12 @@ export function AddTransactionScreen({ navigation, route }: Props) {
             onChangeText={setNote}
           />
 
-          <TapButton style={[styles.saveButton, mode === 'income' && styles.saveButtonIncome]} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>{copy.button}</Text>
-          </TapButton>
+          <PrimaryButton
+            label={copy.button}
+            variant="ember"
+            onPress={handleSave}
+            style={[styles.saveButton, mode === 'income' && styles.saveButtonIncome]}
+          />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -119,7 +123,7 @@ const styles = StyleSheet.create({
   modeButton: {
     flex: 1,
     paddingVertical: space.group,
-    minHeight: 40,
+    minHeight: layout.hitTarget,
     borderRadius: radius.pill,
     alignItems: 'center',
     justifyContent: 'center',
@@ -166,26 +170,6 @@ const styles = StyleSheet.create({
   districtChipIcon: { marginRight: space.xs },
   districtChipLabel: { fontFamily: type.body, fontSize: type.size.sm, color: colors.textOnParchment },
   districtChipLabelActive: { color: colors.parchment },
-  creditCardToggle: { flexDirection: 'row', alignItems: 'center', marginTop: space.md },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: radius.sm,
-    borderWidth: 2,
-    borderColor: colors.moss700,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: space.sm,
-  },
-  checkboxActive: { backgroundColor: colors.moss700 },
-  checkboxMark: { color: colors.parchment, fontFamily: type.bodyBold, fontSize: type.size.sm },
-  creditCardLabel: { fontFamily: type.body, fontSize: type.size.sm, color: colors.textOnParchment },
-  creditCardNote: {
-    fontFamily: type.body,
-    fontSize: type.size.xs,
-    color: colors.textOnParchmentDim,
-    marginTop: space.xs,
-  },
   noteInput: {
     fontFamily: type.body,
     fontSize: type.size.base,
@@ -197,15 +181,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     paddingVertical: space.group,
   },
-  saveButton: {
-    marginTop: space.xl,
-    backgroundColor: colors.ember500,
-    borderRadius: radius.pill,
-    paddingVertical: space.md,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  saveButton: { marginTop: space.xl },
   saveButtonIncome: { backgroundColor: colors.sage500 },
-  saveButtonText: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
 });

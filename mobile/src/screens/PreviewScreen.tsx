@@ -7,7 +7,8 @@ import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
 import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { CategoryIcon } from '@/components/CategoryIcon';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, gradients, radius, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import { themeFor } from '@/theme/categoryTheme';
 import { computeMonthPreview, monthShort, type UpcomingPayment } from '@/engine/preview';
@@ -46,13 +47,13 @@ export function PreviewScreen({ navigation }: Props) {
   const short = preview.endNext < 0;
 
   return (
-    <LinearGradient colors={['#141C12', '#101610', '#0C120E']} style={styles.fill}>
+    <LinearGradient colors={[...gradients.insights]} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
         <ModalTopBar title="Preview" onBack={() => navigation.goBack()} tone="moss" />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeInDown.duration(320)} style={styles.hero}>
-            <Text style={styles.kicker}>
+            <Text style={ui.kickerOnMoss}>
               {preview.nextLabel}
               {preview.hasHistory ? ` · based on ${basis}` : ''}
             </Text>
@@ -73,9 +74,9 @@ export function PreviewScreen({ navigation }: Props) {
 
           <View style={styles.metrics}>
             <Metric label="Start" value={formatEuro(preview.startNext, { cents: false })} />
-            <Metric label="In" value={`+${formatEuro(preview.expectedIncome, { cents: false })}`} tint="#8BC34A" />
-            <Metric label="Out" value={`−${formatEuro(preview.expectedSpend, { cents: false })}`} tint="#E07A3A" />
-            <Metric label="End" value={formatEuro(preview.endNext, { cents: false })} tint={short ? colors.coral500 : '#FFE9A8'} />
+            <Metric label="In" value={`+${formatEuro(preview.expectedIncome, { cents: false })}`} tint={colors.incomeGreen} />
+            <Metric label="Out" value={`−${formatEuro(preview.expectedSpend, { cents: false })}`} tint={colors.outflowOrange} />
+            <Metric label="End" value={formatEuro(preview.endNext, { cents: false })} tint={short ? colors.coral500 : colors.inkGoldBright} />
           </View>
 
           <Text style={styles.section}>Upcoming payments</Text>
@@ -157,7 +158,11 @@ export function PreviewScreen({ navigation }: Props) {
 function PaymentRow({ payment, index }: { payment: UpcomingPayment; index: number }) {
   const date = new Date(payment.date);
   const tint =
-    payment.kind === 'income' ? '#8BC34A' : payment.kind === 'unlock' ? '#6BA3C9' : themeFor(payment.districtId ?? 'vault').accent;
+    payment.kind === 'income'
+      ? colors.incomeGreen
+      : payment.kind === 'unlock'
+        ? '#6BA3C9'
+        : themeFor(payment.districtId ?? 'vault').accent;
   const sign = payment.kind === 'bill' ? '−' : '+';
   return (
     <Animated.View entering={FadeInDown.delay(35 * index).springify().damping(16)} style={styles.row}>
@@ -230,16 +235,15 @@ const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: space.md, paddingBottom: space.xxl, gap: space.sm },
   hero: { marginBottom: 6 },
-  kicker: { fontFamily: type.bodyBold, fontSize: 11, color: colors.gold500, letterSpacing: 1 },
-  headline: { fontFamily: type.display, fontSize: 24, color: colors.parchment, marginTop: 6, lineHeight: 30 },
-  sub: { fontFamily: type.body, fontSize: 14, color: colors.sage300, marginTop: 6 },
+  headline: { fontFamily: type.display, fontSize: type.size.lg + 4, color: colors.parchment, marginTop: 6, lineHeight: 30 },
+  sub: { fontFamily: type.body, fontSize: type.size.sm, color: colors.sage300, marginTop: 6 },
   metrics: { flexDirection: 'row', gap: space.sm, marginVertical: space.sm },
-  metric: { flex: 1, backgroundColor: colors.glass, borderRadius: radius.md, paddingVertical: space.tight, paddingHorizontal: space.sm },
-  metricLabel: { fontFamily: type.bodyBold, fontSize: 10, color: colors.sage300, letterSpacing: 0.4 },
-  metricValue: { fontFamily: type.display, fontSize: 16, color: colors.parchment, marginTop: 4 },
+  metric: { flex: 1, ...ui.glassCard, paddingVertical: space.tight, paddingHorizontal: space.sm },
+  metricLabel: { fontFamily: type.bodyBold, fontSize: type.size.micro, color: colors.sage300, letterSpacing: 0.4 },
+  metricValue: { fontFamily: type.display, fontSize: type.size.base, color: colors.parchment, marginTop: 4 },
   section: {
     fontFamily: type.bodyBold,
-    fontSize: 11,
+    fontSize: type.size.micro,
     color: colors.sage300,
     letterSpacing: 1,
     textTransform: 'uppercase',
@@ -251,8 +255,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: space.group,
-    backgroundColor: colors.glass,
-    borderRadius: radius.md,
+    ...ui.glassCard,
     paddingHorizontal: space.group,
     paddingVertical: space.tight,
   },
@@ -266,13 +269,12 @@ const styles = StyleSheet.create({
   dateDay: { fontFamily: type.display, fontSize: 15, color: colors.parchment, lineHeight: 18 },
   dateMon: { fontFamily: type.bodyBold, fontSize: 9, color: colors.sage300, textTransform: 'uppercase' },
   rowLabel: { fontFamily: type.bodyBold, fontSize: 15, color: colors.parchment },
-  rowAmt: { fontFamily: type.mono, fontSize: 15, color: '#FFE9A8' },
+  rowAmt: { fontFamily: type.mono, fontSize: type.size.sm + 1, color: colors.inkGoldBright },
   empty: { fontFamily: type.body, fontSize: 13, color: colors.textOnMossDim, marginBottom: 8 },
   buildRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    backgroundColor: colors.glass,
-    borderRadius: radius.md,
+    ...ui.glassCard,
     padding: space.group,
   },
   buildLeft: { flex: 1 },

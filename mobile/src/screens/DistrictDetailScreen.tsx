@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
 import { BackButton } from '@/components/ui/BackButton';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { ui } from '@/theme/ui';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { MoneyStack } from '@/components/money/MoneyStack';
 import { colors, layout, radius, space, type } from '@/theme/tokens';
@@ -79,9 +81,12 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
         </View>
 
         {alloc.isOverspent ? (
-          <TapButton style={styles.cover} onPress={() => setCoverOpen(true)}>
-            <Text style={styles.coverText}>Cover {formatEuro(hole)}</Text>
-          </TapButton>
+          <PrimaryButton
+            label={`Cover ${formatEuro(hole)}`}
+            variant="ember"
+            onPress={() => setCoverOpen(true)}
+            style={styles.cover}
+          />
         ) : null}
 
         <FlatList
@@ -107,15 +112,18 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
         />
 
         <View style={styles.bar}>
-          <TapButton style={[styles.barBtn, styles.barBtnMain, { backgroundColor: theme.accent }]} onPress={() => navigation.navigate('Move', { toId: districtId })}>
-            <Text style={[styles.barBtnText, styles.barBtnMainText]}>Move</Text>
-          </TapButton>
+          <PrimaryButton
+            label="Move"
+            variant="ember"
+            onPress={() => navigation.navigate('Move', { toId: districtId })}
+            style={[styles.barBtn, { backgroundColor: theme.accent }]}
+          />
         </View>
 
         <Modal visible={coverOpen} transparent animationType="slide" onRequestClose={() => setCoverOpen(false)}>
-          <View style={styles.backdrop}>
-            <View style={styles.sheet}>
-              <Text style={styles.sheetTitle}>Cover from</Text>
+          <View style={ui.backdrop}>
+            <View style={ui.sheet}>
+              <Text style={ui.sheetTitle}>Cover from</Text>
               {donors.length === 0 ? (
                 <Text style={styles.empty}>No other building has money.</Text>
               ) : (
@@ -134,8 +142,8 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
                   </TapButton>
                 ))
               )}
-              <TapButton onPress={() => setCoverOpen(false)}>
-                <Text style={styles.cancel}>Cancel</Text>
+              <TapButton style={ui.linkBtn} onPress={() => setCoverOpen(false)}>
+                <Text style={ui.linkText}>Cancel</Text>
               </TapButton>
             </View>
           </View>
@@ -173,16 +181,7 @@ const styles = StyleSheet.create({
     marginTop: space.xs,
   },
   stack: { marginTop: space.lg, minHeight: 70, justifyContent: 'center' },
-  cover: {
-    alignSelf: 'center',
-    backgroundColor: colors.coral500,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.lg,
-    paddingVertical: space.group,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  coverText: { fontFamily: type.bodyBold, color: colors.moss900 },
+  cover: { alignSelf: 'center', paddingHorizontal: space.lg },
   list: { padding: space.lg, gap: 0 },
   empty: {
     fontFamily: type.body,
@@ -215,44 +214,12 @@ const styles = StyleSheet.create({
   amount: { fontFamily: type.mono, fontSize: type.size.base, color: colors.parchment },
   amountDark: { fontFamily: type.mono, fontSize: type.size.base, color: colors.textOnParchment },
   bar: { flexDirection: 'row', gap: space.sm, padding: space.lg },
-  barBtn: {
-    flex: 1,
-    backgroundColor: colors.moss700,
-    borderRadius: radius.md,
-    paddingVertical: space.group,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  barBtnMain: { backgroundColor: colors.ember500 },
-  barBtnText: { fontFamily: type.bodyBold, color: colors.parchment },
-  barBtnMainText: { color: colors.moss900 },
-  backdrop: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.parchment,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    padding: space.lg,
-    paddingBottom: 40,
-  },
-  sheetTitle: {
-    fontFamily: type.display,
-    fontSize: type.size.lg,
-    color: colors.textOnParchment,
-    marginBottom: space.md,
-  },
+  barBtn: { flex: 1 },
   donor: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: space.group,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.parchmentDim,
-  },
-  cancel: {
-    fontFamily: type.body,
-    textAlign: 'center',
-    color: colors.textOnParchmentDim,
-    marginTop: space.md,
-    paddingVertical: space.sm,
   },
 });

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useBudgetStore } from '@/store/budgetStore';
 import { useAuthStore } from '@/store/authStore';
 import { CategoryIcon } from '@/components/CategoryIcon';
+import { TapButton } from '@/components/TapButton';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { colors, radius, space, type } from '@/theme/tokens';
 import { TargetType } from '@/types';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -83,18 +85,18 @@ export function EditBudgetScreen({ route, navigation }: Props) {
           </View>
 
           <View style={styles.card}>
-            <Pressable style={styles.targetToggleRow} onPress={() => setHasTarget((v) => !v)}>
+            <TapButton style={styles.targetToggleRow} onPress={() => setHasTarget((v) => !v)}>
               <Text style={styles.label}>Set a savings target</Text>
               <View style={[styles.checkbox, hasTarget && styles.checkboxActive]}>
                 {hasTarget && <Text style={styles.checkboxMark}>✓</Text>}
               </View>
-            </Pressable>
+            </TapButton>
 
             {hasTarget && (
               <>
                 <View style={styles.targetTypeRow}>
                   {(Object.keys(TARGET_TYPE_LABELS) as TargetType[]).map((tt) => (
-                    <Pressable
+                    <TapButton
                       key={tt}
                       style={[styles.typeChip, targetType === tt && styles.typeChipActive]}
                       onPress={() => setTargetType(tt)}
@@ -102,7 +104,7 @@ export function EditBudgetScreen({ route, navigation }: Props) {
                       <Text style={[styles.typeChipText, targetType === tt && styles.typeChipTextActive]}>
                         {TARGET_TYPE_LABELS[tt]}
                       </Text>
-                    </Pressable>
+                    </TapButton>
                   ))}
                 </View>
 
@@ -119,11 +121,11 @@ export function EditBudgetScreen({ route, navigation }: Props) {
                 {targetType === 'TARGET_BY_DATE' && (
                   <>
                     <Text style={styles.label}>Target date</Text>
-                    <Pressable style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
+                    <TapButton style={styles.dateButton} onPress={() => setShowDatePicker(true)}>
                       <Text style={styles.dateButtonText}>
                         {targetDate.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}
                       </Text>
-                    </Pressable>
+                    </TapButton>
                     {showDatePicker && (
                       <DateTimePicker
                         value={targetDate}
@@ -144,9 +146,7 @@ export function EditBudgetScreen({ route, navigation }: Props) {
 
           {mode === 'synced' && <Text style={styles.syncNote}>Signed in — remember to back up after making changes.</Text>}
 
-          <Pressable style={styles.saveButton} onPress={handleSave}>
-            <Text style={styles.saveButtonText}>Save</Text>
-          </Pressable>
+          <PrimaryButton label="Save" variant="ember" onPress={handleSave} style={styles.saveButton} />
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -227,15 +227,5 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: space.sm,
   },
-  saveButton: {
-    marginTop: space.lg,
-    backgroundColor: colors.ember500,
-    borderRadius: radius.pill,
-    paddingVertical: space.md,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    ...cardShadow,
-  },
-  saveButtonText: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
+  saveButton: { marginTop: space.lg, ...cardShadow },
 });

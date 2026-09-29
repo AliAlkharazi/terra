@@ -6,9 +6,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
 import { ModalTopBar } from '@/components/ui/ModalTopBar';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { HealthRing } from '@/components/HealthRing';
-import { colors, healthColor, radius, space, type } from '@/theme/tokens';
+import { colors, gradients, healthColor, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import { themeFor } from '@/theme/categoryTheme';
 import { computeInsights, type PaceStatus } from '@/engine/insights';
@@ -60,7 +62,7 @@ export function ReportsScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#141C12', '#101610', '#0C120E']} style={styles.fill}>
+    <LinearGradient colors={[...gradients.insights]} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
         <ModalTopBar title="Insights" onBack={() => navigation.goBack()} tone="moss" />
 
@@ -74,7 +76,7 @@ export function ReportsScreen({ navigation }: Props) {
               </View>
             </View>
             <View style={styles.heroCopy}>
-              <Text style={styles.kicker}>
+              <Text style={ui.kickerOnMoss}>
                 Day {insights.dayOfMonth} of {insights.daysInMonth}
               </Text>
               <Text style={styles.headline}>{insights.headline}</Text>
@@ -82,19 +84,19 @@ export function ReportsScreen({ navigation }: Props) {
             </View>
           </View>
 
-          <TapButton style={styles.askCard} onPress={() => navigation.navigate('Afford')} pressedScale={0.98}>
-            <Text style={styles.askKicker}>Ask in a sentence</Text>
+          <TapButton style={[ui.glassCardStrong, styles.askCard]} onPress={() => navigation.navigate('Afford')} pressedScale={0.98}>
+            <Text style={ui.kickerOnMoss}>Ask in a sentence</Text>
             <Text style={styles.askTitle}>Can I buy this?</Text>
             <Text style={styles.askHint}>Checks free cash, pace, and what similar things cost you.</Text>
           </TapButton>
 
           <View style={styles.duo}>
-            <TapButton style={styles.askCard} onPress={() => navigation.navigate('Lock')} pressedScale={0.98} hoverScale={1.03}>
-              <Text style={styles.askKicker}>Hold</Text>
+            <TapButton style={[ui.glassCard, styles.askCard]} onPress={() => navigation.navigate('Lock')} pressedScale={0.98} hoverScale={1.03}>
+              <Text style={ui.kickerOnMoss}>Hold</Text>
               <Text style={styles.duoTitle}>Freeze</Text>
             </TapButton>
-            <TapButton style={styles.askCard} onPress={() => navigation.navigate('Preview')} pressedScale={0.98} hoverScale={1.03}>
-              <Text style={styles.askKicker}>Look ahead</Text>
+            <TapButton style={[ui.glassCard, styles.askCard]} onPress={() => navigation.navigate('Preview')} pressedScale={0.98} hoverScale={1.03}>
+              <Text style={ui.kickerOnMoss}>Look ahead</Text>
               <Text style={styles.duoTitle}>Preview</Text>
             </TapButton>
           </View>
@@ -114,7 +116,7 @@ export function ReportsScreen({ navigation }: Props) {
           </View>
 
           {mix > 0 ? (
-            <View style={styles.mixCard}>
+            <View style={ui.glassCard}>
               <Text style={styles.sectionLabel}>Where the money sits</Text>
               <View style={styles.mixBar}>
                 {insights.vault > 0 ? <View style={[styles.mixVault, { flex: insights.vault }]} /> : null}
@@ -122,15 +124,15 @@ export function ReportsScreen({ navigation }: Props) {
                 {insights.spentThisMonth > 0 ? <View style={[styles.mixSpent, { flex: insights.spentThisMonth }]} /> : null}
               </View>
               <View style={styles.mixLegend}>
-                <LegendDot color="#E8C45A" label={`Vault ${formatEuro(insights.vault, { cents: false })}`} />
-                <LegendDot color="#78C050" label={`Town ${formatEuro(insights.inTown, { cents: false })}`} />
-                <LegendDot color="#D96C5F" label={`Spent ${formatEuro(insights.spentThisMonth, { cents: false })}`} />
+                <LegendDot color={colors.vaultGold} label={`Vault ${formatEuro(insights.vault, { cents: false })}`} />
+                <LegendDot color={colors.townGreen} label={`Town ${formatEuro(insights.inTown, { cents: false })}`} />
+                <LegendDot color={colors.coral500} label={`Spent ${formatEuro(insights.spentThisMonth, { cents: false })}`} />
               </View>
             </View>
           ) : null}
 
           {insights.fundPlan.length > 0 ? (
-            <View style={styles.planCard}>
+            <View style={[ui.glassCardStrong, styles.planCard]}>
               <Text style={styles.sectionLabel}>Suggested funding</Text>
               <Text style={styles.planLead}>
                 Move {formatEuro(fundTotal, { cents: false })} from the vault into the buildings that need it most.
@@ -139,12 +141,16 @@ export function ReportsScreen({ navigation }: Props) {
                 <View key={line.districtId} style={styles.planRow}>
                   <CategoryIcon name={line.districtId} size={16} />
                   <Text style={styles.planName}>{labels[line.districtId] ?? line.districtId}</Text>
-                  <Text style={styles.planAmt}>{formatEuro(line.amount, { cents: false })}</Text>
+                  <Text style={[ui.amountGold, styles.planAmt]}>{formatEuro(line.amount, { cents: false })}</Text>
                 </View>
               ))}
-              <TapButton style={[styles.apply, applied && styles.applyDone]} onPress={applyPlan} disabled={applied}>
-                <Text style={[styles.applyText, applied && styles.applyTextDone]}>{applied ? 'Assigned' : 'Apply suggested split'}</Text>
-              </TapButton>
+              <PrimaryButton
+                label={applied ? 'Assigned' : 'Apply suggested split'}
+                variant={applied ? 'ghostMoss' : 'ember'}
+                onPress={applyPlan}
+                disabled={applied}
+                style={styles.apply}
+              />
             </View>
           ) : null}
 
@@ -156,7 +162,7 @@ export function ReportsScreen({ navigation }: Props) {
             return (
               <TapButton
                 key={row.districtId}
-                style={styles.paceRow}
+                style={[ui.glassCard, styles.paceRow]}
                 onPress={() => navigation.navigate('DistrictDetail', { districtId: row.districtId })}
               >
                 <View style={[styles.paceStripe, { backgroundColor: theme.accent }]} />
@@ -208,82 +214,50 @@ const styles = StyleSheet.create({
   hero: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   ringWrap: { width: 118, height: 118, alignItems: 'center', justifyContent: 'center' },
   ringLabel: { ...StyleSheet.absoluteFillObject, alignItems: 'center', justifyContent: 'center' },
-  ringScore: { fontFamily: type.display, fontSize: 28, marginTop: 2 },
-  ringHint: { fontFamily: type.bodyBold, fontSize: 11, color: colors.sage300, letterSpacing: 0.6 },
+  ringScore: { fontFamily: type.display, fontSize: type.size.lg + 8, marginTop: 2 },
+  ringHint: { fontFamily: type.bodyBold, fontSize: type.size.micro, color: colors.sage300, letterSpacing: 0.6 },
   heroCopy: { flex: 1 },
-  kicker: { fontFamily: type.bodyBold, fontSize: 11, color: colors.gold500, letterSpacing: 1 },
   headline: { fontFamily: type.display, fontSize: type.size.xl - 4, color: colors.parchment, marginTop: space.xs, lineHeight: 26 },
   detail: { fontFamily: type.body, fontSize: type.size.sm, color: colors.sage300, marginTop: space.sm, lineHeight: 18 },
-  askCard: {
-    backgroundColor: colors.goldWash,
-    borderRadius: radius.md,
-    padding: space.md,
-    borderWidth: 1,
-    borderColor: colors.goldBorder,
-  },
-  askKicker: { fontFamily: type.bodyBold, fontSize: 11, color: colors.gold500, letterSpacing: 1, textTransform: 'uppercase' },
-  askTitle: { fontFamily: type.display, fontSize: 22, color: colors.parchment, marginTop: 4 },
+  askCard: { flex: 1 },
+  askTitle: { fontFamily: type.display, fontSize: type.size.lg + 2, color: colors.parchment, marginTop: 4 },
   askHint: { fontFamily: type.body, fontSize: type.size.sm, color: colors.sage300, marginTop: space.sm },
   duo: { flexDirection: 'row', gap: space.sm },
-  duoTitle: { fontFamily: type.display, fontSize: 18, color: colors.parchment, marginTop: 4 },
+  duoTitle: { fontFamily: type.display, fontSize: type.size.md, color: colors.parchment, marginTop: 4 },
   metrics: { flexDirection: 'row', gap: space.sm },
   metric: {
     flex: 1,
-    backgroundColor: colors.glass,
-    borderRadius: radius.md,
+    ...ui.glassCard,
     padding: space.group,
   },
-  metricLabel: { fontFamily: type.bodyBold, fontSize: 10, color: colors.sage300, letterSpacing: 0.4 },
-  metricValue: { fontFamily: type.display, fontSize: 22, color: colors.parchment, marginTop: 4 },
-  metricHint: { fontFamily: type.body, fontSize: 10, color: colors.textOnMossDim, marginTop: 4 },
-  mixCard: {
-    backgroundColor: colors.glass,
-    borderRadius: radius.md,
-    padding: space.md,
-  },
+  metricLabel: { fontFamily: type.bodyBold, fontSize: type.size.micro, color: colors.sage300, letterSpacing: 0.4 },
+  metricValue: { fontFamily: type.display, fontSize: type.size.lg + 2, color: colors.parchment, marginTop: 4 },
+  metricHint: { fontFamily: type.body, fontSize: type.size.micro, color: colors.textOnMossDim, marginTop: 4 },
   sectionLabel: {
     fontFamily: type.bodyBold,
-    fontSize: 11,
+    fontSize: type.size.micro,
     color: colors.sage300,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   mixBar: { flexDirection: 'row', height: 12, borderRadius: 6, overflow: 'hidden', marginTop: space.group, backgroundColor: colors.moss800 },
-  mixVault: { backgroundColor: '#E8C45A' },
-  mixTown: { backgroundColor: '#78C050' },
-  mixSpent: { backgroundColor: '#D96C5F' },
+  mixVault: { backgroundColor: colors.vaultGold },
+  mixTown: { backgroundColor: colors.townGreen },
+  mixSpent: { backgroundColor: colors.coral500 },
   mixLegend: { flexDirection: 'row', flexWrap: 'wrap', gap: space.group, marginTop: space.group },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   dot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontFamily: type.body, fontSize: 11, color: colors.parchment },
-  planCard: {
-    backgroundColor: colors.goldWash,
-    borderRadius: radius.md,
-    padding: space.md,
-    borderWidth: 1,
-    borderColor: colors.goldBorder,
-  },
+  legendText: { fontFamily: type.body, fontSize: type.size.micro + 1, color: colors.parchment },
+  planCard: {},
   planLead: { fontFamily: type.body, fontSize: type.size.sm, color: colors.parchment, marginTop: space.sm, marginBottom: space.group, lineHeight: 18 },
   planRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.sm },
   planName: { flex: 1, fontFamily: type.bodyBold, fontSize: 14, color: colors.parchment },
-  planAmt: { fontFamily: type.mono, fontSize: 14, color: '#FFE9A8' },
-  apply: {
-    marginTop: space.group,
-    backgroundColor: colors.ember500,
-    borderRadius: radius.pill,
-    paddingVertical: space.group,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  applyDone: { backgroundColor: colors.moss700 },
-  applyText: { fontFamily: type.bodyBold, fontSize: 15, color: colors.moss900 },
-  applyTextDone: { color: colors.parchment },
+  planAmt: { fontSize: type.size.sm + 1 },
+  apply: { marginTop: space.group },
   paceRow: {
     flexDirection: 'row',
-    backgroundColor: colors.glass,
-    borderRadius: radius.md,
     overflow: 'hidden',
+    padding: 0,
   },
   paceStripe: { width: 4 },
   paceBody: { flex: 1, padding: space.group },

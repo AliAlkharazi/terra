@@ -10,7 +10,9 @@ import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { computeAffordability, type AffordVerdict } from '@/engine/afford';
 import { estimateMarketPrice } from '@/engine/estimatePrice';
 import { parseWant } from '@/engine/wantParse';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { colors, gradients, radius, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -65,12 +67,13 @@ export function AffordScreen({ navigation }: Props) {
     }
   };
 
-  const tone = verdict?.answer === 'yes' ? '#8BC34A' : verdict?.answer === 'no' ? '#D96C5F' : '#E8C45A';
+  const tone =
+    verdict?.answer === 'yes' ? colors.incomeGreen : verdict?.answer === 'no' ? colors.coral500 : colors.vaultGold;
   const word =
     verdict?.answer === 'yes' ? 'Yes' : verdict?.answer === 'no' ? 'No' : busy ? 'Checking…' : 'Need more';
 
   return (
-    <LinearGradient colors={['#141C12', '#101610', '#0C120E']} style={styles.fill}>
+    <LinearGradient colors={[...gradients.insights]} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
         <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ModalTopBar title="Can I buy this?" onBack={() => navigation.goBack()} tone="moss" />
@@ -90,12 +93,16 @@ export function AffordScreen({ navigation }: Props) {
               autoFocus
               editable={!busy}
             />
-            <TapButton style={styles.go} onPress={() => void ask()} disabled={!text.trim() || busy}>
-              {busy ? <ActivityIndicator color={colors.moss900} /> : <Text style={styles.goText}>Ask</Text>}
-            </TapButton>
+            {busy ? (
+              <View style={styles.goBusy}>
+                <ActivityIndicator color={colors.moss900} />
+              </View>
+            ) : (
+              <PrimaryButton label="Ask" variant="ember" onPress={() => void ask()} disabled={!text.trim()} />
+            )}
 
             {verdict ? (
-              <View style={[styles.card, { borderColor: tone }]}>
+              <View style={[ui.glassCard, styles.card, { borderColor: tone }]}>
                 <Text style={[styles.word, { color: tone }]}>{word}</Text>
                 <Text style={styles.line}>{verdict.line}</Text>
                 {verdict.price != null ? (
@@ -134,21 +141,16 @@ const styles = StyleSheet.create({
     fontSize: type.size.md,
     color: colors.parchment,
   },
-  go: {
-    backgroundColor: colors.ember500,
-    borderRadius: radius.pill,
-    paddingVertical: space.group,
+  goBusy: {
+    ...ui.emberBtn,
     alignItems: 'center',
-    minHeight: 48,
     justifyContent: 'center',
   },
-  goText: { fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
   card: {
     marginTop: space.md,
     borderWidth: 1.5,
     borderRadius: radius.panel,
     padding: space.lg,
-    backgroundColor: colors.glass,
   },
   word: { fontFamily: type.display, fontSize: 40 },
   line: { fontFamily: type.body, fontSize: 18, color: colors.parchment, marginTop: 8, lineHeight: 26 },

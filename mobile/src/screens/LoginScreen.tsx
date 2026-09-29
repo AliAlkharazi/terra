@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import { KeyboardAvoidingView, Platform, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '@/store/authStore';
+import { BackButton } from '@/components/ui/BackButton';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { TapButton } from '@/components/TapButton';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { AuthStackParamList } from '@/navigation/types';
 
@@ -24,15 +27,17 @@ export function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <SafeAreaView style={styles.fill}>
-      <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <SafeAreaView style={ui.fillParchment}>
+      <KeyboardAvoidingView style={ui.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={styles.content}>
-          <Text style={styles.title}>Welcome back</Text>
-          <Text style={styles.subtitle}>Log in to sync Terra across your devices.</Text>
+          <BackButton onPress={() => navigation.navigate('AuthGate')} style={styles.back} />
+
+          <Text style={ui.title}>Welcome back</Text>
+          <Text style={ui.subtitle}>Log in to sync Terra across your devices.</Text>
 
           <Text style={styles.label}>Email</Text>
           <TextInput
-            style={styles.input}
+            style={ui.input}
             autoCapitalize="none"
             keyboardType="email-address"
             placeholder="you@example.com"
@@ -43,7 +48,7 @@ export function LoginScreen({ navigation }: Props) {
 
           <Text style={styles.label}>Password</Text>
           <TextInput
-            style={styles.input}
+            style={ui.input}
             secureTextEntry
             placeholder="••••••••"
             placeholderTextColor={colors.textOnParchmentDim}
@@ -51,18 +56,18 @@ export function LoginScreen({ navigation }: Props) {
             onChangeText={setPassword}
           />
 
-          {error && <Text style={styles.error}>{error}</Text>}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-          <TapButton style={styles.primaryButton} onPress={handleLogin} disabled={status === 'loading'}>
-            <Text style={styles.primaryButtonText}>{status === 'loading' ? 'Logging in…' : 'Log in'}</Text>
-          </TapButton>
+          <PrimaryButton
+            label={status === 'loading' ? 'Logging in…' : 'Log in'}
+            variant="ember"
+            onPress={handleLogin}
+            disabled={status === 'loading'}
+            style={styles.cta}
+          />
 
-          <TapButton style={styles.linkButton} onPress={() => navigation.navigate('Register')}>
-            <Text style={styles.linkText}>Don't have an account? Sign up</Text>
-          </TapButton>
-
-          <TapButton style={styles.linkButton} onPress={() => navigation.navigate('AuthGate')}>
-            <Text style={styles.linkText}>← Back</Text>
+          <TapButton style={ui.linkBtn} onPress={() => navigation.navigate('Register')}>
+            <Text style={ui.linkText}>Don't have an account? Sign up</Text>
           </TapButton>
         </View>
       </KeyboardAvoidingView>
@@ -71,33 +76,15 @@ export function LoginScreen({ navigation }: Props) {
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: colors.parchment },
   content: { flex: 1, padding: space.lg, justifyContent: 'center' },
-  title: { fontFamily: type.display, fontSize: type.size.xxl, color: colors.textOnParchment },
-  subtitle: { fontFamily: type.body, fontSize: type.size.sm, color: colors.textOnParchmentDim, marginTop: space.xs, marginBottom: space.lg },
-  label: { fontFamily: type.bodyBold, fontSize: type.size.sm, color: colors.textOnParchmentDim, marginTop: space.md, marginBottom: space.xs },
-  input: {
-    fontFamily: type.body,
-    fontSize: type.size.base,
-    color: colors.textOnParchment,
-    backgroundColor: colors.creamLift,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.parchmentDim,
-    paddingHorizontal: space.md,
-    paddingVertical: space.group,
+  back: { alignSelf: 'flex-start', marginBottom: space.md },
+  label: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.sm,
+    color: colors.textOnParchmentDim,
+    marginTop: space.md,
+    marginBottom: space.xs,
   },
   error: { fontFamily: type.body, fontSize: type.size.sm, color: colors.coral500, marginTop: space.md },
-  primaryButton: {
-    marginTop: space.xl,
-    backgroundColor: colors.ember500,
-    borderRadius: radius.pill,
-    paddingVertical: space.md,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  primaryButtonText: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
-  linkButton: { marginTop: space.md, alignItems: 'center', paddingVertical: space.sm },
-  linkText: { fontFamily: type.body, fontSize: type.size.sm, color: colors.textOnParchmentDim },
+  cta: { marginTop: space.xl },
 });

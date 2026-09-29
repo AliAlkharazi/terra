@@ -8,7 +8,7 @@ type Props = {
   onBack: () => void;
   /** parchment = light screens; moss = dark overlay screens */
   tone?: 'parchment' | 'moss';
-  /** Optional right-side spacer / control (keeps title centered) */
+  /** Optional right-side control (keeps title centered) */
   right?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
 };
@@ -21,7 +21,7 @@ export function ModalTopBar({ title, onBack, tone = 'parchment', right, style }:
       <Text style={[styles.title, moss && styles.titleMoss]} numberOfLines={1}>
         {title}
       </Text>
-      <View style={styles.slot}>{right ?? null}</View>
+      <View style={styles.slot}>{right ?? <View style={styles.spacer} />}</View>
     </View>
   );
 }
@@ -47,12 +47,17 @@ const styles = StyleSheet.create({
   titleMoss: {
     color: colors.parchment,
     fontFamily: type.display,
-    fontSize: type.size.xl - 4,
+    fontSize: type.size.lg,
   },
   slot: {
     width: layout.backSize,
-    height: layout.backSize,
+    minWidth: layout.hitTarget,
+    minHeight: layout.hitTarget,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  spacer: {
+    width: layout.backSize,
+    height: layout.backSize,
   },
 });

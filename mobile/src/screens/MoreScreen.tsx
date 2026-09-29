@@ -5,6 +5,7 @@ import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { ModalTopBar } from '@/components/ui/ModalTopBar';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { themeFor } from '@/theme/categoryTheme';
 import { formatEuro } from '@/theme/money';
@@ -31,12 +32,19 @@ export function MoreScreen({ navigation }: Props) {
         <ModalTopBar title="Activity" onBack={() => navigation.goBack()} />
 
         <View style={styles.bankBar}>
-          <TapButton style={styles.bankBtn} onPress={() => navigation.navigate('ConnectBank')}>
-            <Text style={styles.bankBtnText}>Connect Sparkasse</Text>
-          </TapButton>
-          <TapButton style={styles.bankBtnSecondary} onPress={() => navigation.navigate('BankInbox')}>
-            <Text style={styles.bankBtnSecondaryText}>Inbox</Text>
-          </TapButton>
+          <PrimaryButton
+            label="Connect Sparkasse"
+            variant="primary"
+            onPress={() => navigation.navigate('ConnectBank')}
+            style={styles.bankBtn}
+            textStyle={styles.bankBtnText}
+          />
+          <PrimaryButton
+            label="Inbox"
+            variant="secondary"
+            onPress={() => navigation.navigate('BankInbox')}
+            style={styles.bankBtnSecondary}
+          />
         </View>
 
         <FlatList
@@ -87,26 +95,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: space.md,
     marginBottom: space.group,
   },
-  bankBtn: {
-    flex: 1,
-    backgroundColor: colors.moss800,
-    borderRadius: radius.md,
-    paddingVertical: space.group,
-    minHeight: layout.hitTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bankBtnText: { fontFamily: type.bodyBold, color: colors.parchment, fontSize: type.size.sm },
-  bankBtnSecondary: {
-    backgroundColor: colors.parchmentDim,
-    borderRadius: radius.md,
-    paddingVertical: space.group,
-    paddingHorizontal: space.md,
-    minHeight: layout.hitTarget,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  bankBtnSecondaryText: { fontFamily: type.bodyBold, color: colors.moss900, fontSize: type.size.sm },
+  bankBtn: { flex: 1, backgroundColor: colors.moss800, borderRadius: radius.md },
+  bankBtnText: { fontSize: type.size.sm },
+  bankBtnSecondary: { paddingHorizontal: space.lg, borderRadius: radius.md },
   list: { paddingHorizontal: space.md, paddingBottom: space.xl },
   empty: {
     fontFamily: type.body,

@@ -3,8 +3,9 @@ import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
+import { BackButton } from '@/components/ui/BackButton';
 import { CategoryIcon } from '@/components/CategoryIcon';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -34,9 +35,7 @@ export function AssignScreen({ navigation }: Props) {
   return (
     <SafeAreaView style={styles.fill}>
       <View style={styles.header}>
-        <TapButton onPress={() => navigation.goBack()}>
-          <Text style={styles.back}>Back</Text>
-        </TapButton>
+        <BackButton onPress={() => navigation.goBack()} tone="moss" style={styles.back} />
         <Text style={styles.title}>Give jobs</Text>
         <Text style={styles.vault}>{formatEuro(vault)}</Text>
         <Text style={styles.sub}>In the vault — tap to send it to a building</Text>
@@ -87,9 +86,9 @@ export function AssignScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.moss900 },
   header: { padding: space.lg, borderBottomWidth: 1, borderBottomColor: colors.moss700 },
-  back: { fontFamily: type.bodyBold, fontSize: type.size.sm, color: colors.sage300, marginBottom: space.sm },
+  back: { marginBottom: space.sm },
   title: { fontFamily: type.display, fontSize: type.size.xl, color: colors.parchment },
-  vault: { fontFamily: type.display, fontSize: type.size.xxl, color: colors.inkGold, marginTop: space.xs },
+  vault: { fontFamily: type.display, fontSize: type.size.xxl, color: colors.inkGoldBright, marginTop: space.xs },
   sub: {
     fontFamily: type.body,
     fontSize: type.size.sm,
@@ -114,8 +113,10 @@ const styles = StyleSheet.create({
     borderRadius: radius.pill,
     paddingHorizontal: space.group,
     paddingVertical: space.sm,
-    minHeight: 36,
+    minHeight: layout.hitTarget,
+    minWidth: layout.hitTarget,
     justifyContent: 'center',
+    alignItems: 'center',
   },
   chipMain: { backgroundColor: colors.ember500 },
   chipText: { fontFamily: type.bodyBold, fontSize: type.size.sm, color: colors.parchment },

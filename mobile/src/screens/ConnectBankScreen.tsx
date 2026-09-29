@@ -14,7 +14,9 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import { TapButton } from '@/components/TapButton';
 import { ModalTopBar as TopBar } from '@/components/ui/ModalTopBar';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { colors, radius, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useBudgetStore } from '@/store/budgetStore';
 import {
@@ -81,9 +83,7 @@ export function ConnectBankScreen({ navigation }: Props) {
               Log in to Terra first — bank linking uses your account so the Sparkasse session stays on the
               server (never your PIN).
             </Text>
-            <TapButton style={styles.primary} onPress={() => useAuthStore.getState().logout()}>
-              <Text style={styles.primaryText}>Go to login</Text>
-            </TapButton>
+            <PrimaryButton label="Go to login" variant="ember" onPress={() => useAuthStore.getState().logout()} />
           </View>
         </SafeAreaView>
       </View>
@@ -197,17 +197,13 @@ export function ConnectBankScreen({ navigation }: Props) {
                     {c.lastSyncedAt ? new Date(c.lastSyncedAt).toLocaleString() : 'never'}
                   </Text>
                   <View style={styles.rowBtns}>
-                    <TapButton style={styles.primary} onPress={() => sync(c.id)}>
-                      <Text style={styles.primaryText}>Sync</Text>
-                    </TapButton>
-                    <TapButton style={styles.secondary} onPress={() => disconnect(c.id)}>
-                      <Text style={styles.secondaryText}>Disconnect</Text>
-                    </TapButton>
+                    <PrimaryButton label="Sync" variant="ember" onPress={() => sync(c.id)} style={styles.rowBtn} />
+                    <PrimaryButton label="Disconnect" variant="secondary" onPress={() => disconnect(c.id)} style={styles.rowBtn} />
                   </View>
                 </View>
               ))}
-              <TapButton style={styles.link} onPress={() => navigation.navigate('BankInbox')}>
-                <Text style={styles.linkText}>Uncategorized inbox →</Text>
+              <TapButton style={ui.linkBtn} onPress={() => navigation.navigate('BankInbox')}>
+                <Text style={ui.linkText}>Uncategorized inbox →</Text>
               </TapButton>
             </View>
           )}
@@ -219,12 +215,10 @@ export function ConnectBankScreen({ navigation }: Props) {
             onSubmitEditing={() => void search()}
             placeholder="Search banks"
             placeholderTextColor={colors.textOnParchmentDim}
-            style={styles.input}
+            style={ui.input}
             autoCorrect={false}
           />
-          <TapButton style={styles.secondary} onPress={() => void search()}>
-            <Text style={styles.secondaryText}>Search</Text>
-          </TapButton>
+          <PrimaryButton label="Search" variant="secondary" onPress={() => void search()} style={styles.searchBtn} />
         </View>
 
         {loading && <ActivityIndicator color={colors.moss800} style={{ marginVertical: 12 }} />}
@@ -273,39 +267,9 @@ const styles = StyleSheet.create({
     marginTop: space.group,
     marginBottom: space.sm,
   },
-  input: {
-    backgroundColor: colors.cream,
-    borderRadius: radius.md,
-    paddingHorizontal: space.group,
-    paddingVertical: space.group,
-    fontFamily: type.body,
-    color: colors.moss900,
-    marginBottom: space.sm,
-  },
-  primary: {
-    backgroundColor: colors.ember500,
-    borderRadius: radius.md,
-    paddingVertical: space.group,
-    paddingHorizontal: space.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    flex: 1,
-  },
-  primaryText: { fontFamily: type.bodyBold, color: colors.moss900 },
-  secondary: {
-    backgroundColor: colors.moss800,
-    borderRadius: radius.md,
-    paddingVertical: space.group,
-    paddingHorizontal: space.md,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 44,
-    marginBottom: space.sm,
-    flex: 1,
-  },
-  secondaryText: { fontFamily: type.bodyBold, color: colors.parchment },
   rowBtns: { flexDirection: 'row', gap: space.sm, marginTop: space.tight },
+  rowBtn: { flex: 1 },
+  searchBtn: { marginBottom: space.sm, backgroundColor: colors.moss800 },
   card: {
     backgroundColor: colors.cream,
     borderRadius: radius.md,
@@ -313,8 +277,6 @@ const styles = StyleSheet.create({
     marginBottom: space.sm,
   },
   cardTitle: { fontFamily: type.bodyBold, fontSize: type.size.sm + 1, color: colors.moss900 },
-  link: { paddingVertical: space.sm },
-  linkText: { fontFamily: type.body, color: colors.moss700 },
   list: { paddingHorizontal: space.md, paddingBottom: 40 },
   instRow: {
     backgroundColor: colors.cream,

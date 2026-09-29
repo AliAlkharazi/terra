@@ -9,7 +9,8 @@ import { VillageMap } from '@/components/village/VillageMap';
 import { TapButton } from '@/components/TapButton';
 import { GoalAirplane } from '@/components/GoalAirplane';
 import { useCountUp } from '@/components/money/useCountUp';
-import { colors, healthColor, layout, radius, shadow, space, type } from '@/theme/tokens';
+import { colors, gradients, healthColor, layout, radius, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import { computeInsights } from '@/engine/insights';
 import { lockedTotal } from '@/engine/locks';
@@ -111,7 +112,7 @@ export function WorldScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#3A4A22', '#1A2618', '#101610']} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={styles.fill}>
+    <LinearGradient colors={[...gradients.world]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={styles.fill}>
       <View pointerEvents="none" style={styles.sunGlow} />
       <SafeAreaView style={styles.fill}>
         <View style={styles.header}>
@@ -122,9 +123,9 @@ export function WorldScreen({ navigation }: Props) {
               Vault {formatEuro(shownVault, { cents: false })} · Town {formatEuro(shownTown, { cents: false })}
               {locked > 0 ? ` · Frozen ${formatEuro(locked, { cents: false })}` : ''}
             </Text>
-            <View style={styles.healthChip}>
+            <View style={[ui.chipOnMoss, styles.healthChip]}>
               <View style={[styles.healthDot, { backgroundColor: healthColor(insights.health) }]} />
-              <Text style={styles.healthChipText}>
+              <Text style={ui.chipTextOnMoss}>
                 Insights {insights.health} · {insights.healthLabel}
               </Text>
             </View>
@@ -147,7 +148,7 @@ export function WorldScreen({ navigation }: Props) {
           />
         </View>
 
-        <View style={styles.dock}>
+        <View style={ui.dock}>
           <View style={styles.dockPrimary}>
             <TapButton style={styles.dockBtn} onPress={() => navigation.navigate('Deposit')} hoverScale={1.03}>
               <Text style={styles.dockBtnText}>Deposit</Text>
@@ -161,22 +162,22 @@ export function WorldScreen({ navigation }: Props) {
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockSecondary}>
-            <TapButton onPress={() => navigation.navigate('Lock')} pressedScale={0.96} hoverScale={1.04}>
+            <TapButton onPress={() => navigation.navigate('Lock')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
               <Text style={styles.dockLink}>Freeze</Text>
             </TapButton>
             <Text style={styles.dockDot}>·</Text>
-            <TapButton onPress={() => navigation.navigate('Preview')} pressedScale={0.96} hoverScale={1.04}>
+            <TapButton onPress={() => navigation.navigate('Preview')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
               <Text style={styles.dockLink}>Preview</Text>
             </TapButton>
             <Text style={styles.dockDot}>·</Text>
-            <TapButton onPress={() => navigation.navigate('Afford')} pressedScale={0.96} hoverScale={1.04}>
+            <TapButton onPress={() => navigation.navigate('Afford')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
               <Text style={styles.dockLink}>Ask</Text>
             </TapButton>
           </View>
         </View>
 
         <TapButton style={styles.account} onPress={openAccount} pressedScale={0.92}>
-          <Text style={styles.accountText}>{mode === 'synced' ? 'Account' : 'Offline'}</Text>
+          <Text style={[ui.chipTextOnMoss, styles.accountText]}>{mode === 'synced' ? 'Account' : 'Offline'}</Text>
         </TapButton>
       </SafeAreaView>
     </LinearGradient>
@@ -284,23 +285,10 @@ const styles = StyleSheet.create({
     lineHeight: Math.round(type.size.sm * type.line.snug),
   },
   healthChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
     alignSelf: 'center',
-    gap: space.sm,
     marginTop: space.xs,
-    backgroundColor: colors.glassInk,
-    borderRadius: radius.pill,
-    paddingHorizontal: space.tight,
-    paddingVertical: space.xs,
   },
   healthDot: { width: 8, height: 8, borderRadius: 4 },
-  healthChipText: {
-    fontFamily: type.bodyBold,
-    fontSize: type.size.xs,
-    color: colors.parchment,
-    letterSpacing: 0.3,
-  },
   status: {
     fontFamily: type.body,
     fontSize: type.size.xs,
@@ -325,17 +313,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: space.xs,
   },
-  dock: {
-    marginHorizontal: space.md,
-    marginBottom: space.md,
-    backgroundColor: colors.dockBg,
-    borderRadius: radius.panel,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    padding: space.tight,
-    gap: space.tight,
-    ...shadow.dock,
-  },
   dockPrimary: {
     flexDirection: 'row',
     gap: space.sm,
@@ -354,7 +331,7 @@ const styles = StyleSheet.create({
   },
   dockBtnText: {
     fontFamily: type.bodyBold,
-    fontSize: type.size.sm,
+    fontSize: type.size.base,
     color: colors.parchment,
   },
   dockBtnMainText: {
@@ -372,13 +349,16 @@ const styles = StyleSheet.create({
     gap: space.group,
     paddingVertical: space.xs,
   },
+  dockLinkHit: {
+    minHeight: layout.hitTarget,
+    justifyContent: 'center',
+    paddingHorizontal: space.sm,
+  },
   dockLink: {
     fontFamily: type.bodyBold,
     fontSize: type.size.sm,
     color: colors.inkGold,
     letterSpacing: 0.2,
-    paddingVertical: space.xs,
-    paddingHorizontal: space.xs,
   },
   dockDot: {
     fontFamily: type.body,
@@ -387,14 +367,11 @@ const styles = StyleSheet.create({
   },
   account: { position: 'absolute', top: 56, left: space.md, zIndex: 8 },
   accountText: {
-    fontFamily: type.bodyBold,
-    fontSize: type.size.xs,
-    color: colors.parchment,
     backgroundColor: colors.glassInk,
     overflow: 'hidden',
     borderRadius: radius.pill,
     paddingHorizontal: space.group,
-    paddingVertical: space.xs,
+    paddingVertical: space.sm,
   },
   goalsLabel: {
     fontFamily: type.bodyBold,

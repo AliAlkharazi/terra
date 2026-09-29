@@ -25,6 +25,14 @@ export const colors = {
   coral500: '#D96C5F',
   gold500: '#D4B25A',
   inkGold: '#F4E6A8',
+  /** Brighter gold for amounts on moss */
+  inkGoldBright: '#FFE9A8',
+
+  /** Insight chart accents */
+  vaultGold: '#E8C45A',
+  townGreen: '#78C050',
+  incomeGreen: '#8BC34A',
+  outflowOrange: '#E07A3A',
 
   textOnMoss: '#F0EAD6',
   textOnMossDim: '#B9CBB9',
@@ -47,6 +55,13 @@ export const colors = {
   sunGlow: 'rgba(232, 176, 72, 0.18)',
 } as const;
 
+export const gradients = {
+  world: ['#3A4A22', '#1A2618', '#101610'] as const,
+  insights: ['#141C12', '#1A2618', '#0E1410'] as const,
+  goals: ['#2A3A1C', '#1B2E24', '#12201A'] as const,
+  auth: ['#26402F', '#12201A'] as const,
+} as const;
+
 export const type = {
   display: 'Baloo2_700Bold',
   displayMedium: 'Baloo2_600SemiBold',
@@ -55,6 +70,7 @@ export const type = {
   mono: 'Manrope_600SemiBold',
 
   size: {
+    micro: 10,
     xs: 12,
     sm: 14,
     base: 16,
@@ -63,6 +79,8 @@ export const type = {
     xl: 26,
     xxl: 34,
     display: 44,
+    /** Large money amounts (Deposit / Lock / Move) */
+    hero: 56,
   },
   line: {
     tight: 1.15,
@@ -102,10 +120,10 @@ export const radius = {
 export const layout = {
   screenPad: space.md,
   screenPadLg: space.lg,
-  backSize: 36,
+  backSize: 40,
   listBottom: 40,
   dockPad: space.sm,
-  hitTarget: 44,
+  hitTarget: 48,
   sceneInset: 8,
 } as const;
 

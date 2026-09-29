@@ -1,9 +1,10 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { District, AllocationState } from '@/types';
 import { colors, radius, shadow, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { CategoryIcon } from '@/components/CategoryIcon';
+import { TapButton } from '@/components/TapButton';
 
 interface Props {
   district: District;
@@ -15,7 +16,7 @@ export function DistrictCard({ district, state, onPress }: Props) {
   const accentColor = state.isOverspent ? colors.coral500 : colors.sage500;
 
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}>
+    <TapButton onPress={onPress} style={styles.card} pressedScale={0.98}>
       <View style={[styles.accentBar, { backgroundColor: accentColor }]} />
       <View style={styles.body}>
         <View style={styles.iconCircle}>
@@ -34,7 +35,7 @@ export function DistrictCard({ district, state, onPress }: Props) {
           </View>
         )}
       </View>
-    </Pressable>
+    </TapButton>
   );
 }
 
@@ -48,7 +49,6 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...shadow.soft,
   },
-  cardPressed: { opacity: 0.88, transform: [{ scale: 0.98 }] },
   accentBar: { height: 3, width: '100%' },
   body: { padding: space.group, alignItems: 'center', gap: space.xs },
   iconCircle: {

@@ -5,7 +5,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { TapButton } from '@/components/TapButton';
 import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { useGoalsStore } from '@/store/goalsStore';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { colors, gradients, radius, space, type } from '@/theme/tokens';
+import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -28,7 +30,7 @@ export function GoalsScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={['#2A3A1C', '#141C12', '#0C120E']} style={styles.fill}>
+    <LinearGradient colors={[...gradients.goals]} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
         <ModalTopBar title="Goals" onBack={() => navigation.goBack()} tone="moss" />
 
@@ -59,11 +61,11 @@ export function GoalsScreen({ navigation }: Props) {
       </SafeAreaView>
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
-        <Pressable style={styles.backdrop} onPress={() => setOpen(false)}>
-          <Pressable style={styles.sheet} onPress={() => undefined}>
-            <Text style={styles.sheetTitle}>New goal</Text>
+        <Pressable style={ui.backdrop} onPress={() => setOpen(false)}>
+          <Pressable style={ui.sheet} onPress={() => undefined}>
+            <Text style={ui.sheetTitle}>New goal</Text>
             <TextInput
-              style={styles.input}
+              style={ui.input}
               placeholder="Name"
               placeholderTextColor={colors.textOnParchmentDim}
               value={name}
@@ -79,9 +81,7 @@ export function GoalsScreen({ navigation }: Props) {
                 </TapButton>
               ))}
             </View>
-            <TapButton style={styles.save} onPress={save} disabled={!name.trim()}>
-              <Text style={styles.saveText}>Add</Text>
-            </TapButton>
+            <PrimaryButton label="Add" variant="primary" onPress={save} disabled={!name.trim()} style={styles.save} />
           </Pressable>
         </Pressable>
       </Modal>
@@ -129,28 +129,6 @@ const styles = StyleSheet.create({
     marginTop: space.md,
   },
   plusMarkSmall: { fontSize: 28, color: colors.inkGold, marginTop: -2 },
-  backdrop: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: colors.parchment,
-    borderTopLeftRadius: radius.lg,
-    borderTopRightRadius: radius.lg,
-    padding: space.lg,
-    paddingBottom: 40,
-  },
-  sheetTitle: {
-    fontFamily: type.display,
-    fontSize: type.size.xl - 4,
-    color: colors.moss900,
-    marginBottom: space.md,
-  },
-  input: {
-    fontFamily: type.bodyBold,
-    fontSize: type.size.md,
-    color: colors.moss900,
-    borderBottomWidth: 1.5,
-    borderBottomColor: colors.moss700,
-    paddingVertical: space.sm,
-  },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.md },
   chip: {
     backgroundColor: colors.parchmentDim,
@@ -159,14 +137,5 @@ const styles = StyleSheet.create({
     paddingVertical: space.sm,
   },
   chipText: { fontFamily: type.body, fontSize: type.size.sm, color: colors.moss800 },
-  save: {
-    marginTop: space.lg,
-    backgroundColor: colors.moss900,
-    borderRadius: radius.pill,
-    paddingVertical: space.group,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  saveText: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.parchment },
+  save: { marginTop: space.lg },
 });
