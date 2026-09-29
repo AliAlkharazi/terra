@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
-import { BackButton } from '@/components/ui/BackButton';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { ui } from '@/theme/ui';
 import { MoneyKeypad, appendAmount } from '@/components/MoneyKeypad';
@@ -45,10 +45,9 @@ export function LockScreen({ navigation }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <BackButton onPress={() => navigation.goBack()} tone="moss" style={styles.close} />
+        <ModalTopBar title="Freeze" onBack={() => navigation.goBack()} tone="moss" />
 
         <View style={styles.hero}>
-          <Text style={ui.kickerOnMoss}>Freeze</Text>
           <Text style={[ui.amountHero, amount === 0 && ui.amountHeroDim]}>€{amount || 0}</Text>
           <Text style={styles.free}>
             {formatEuro(vault, { cents: false })} free
@@ -116,12 +115,7 @@ export function LockScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.moss900 },
-  close: {
-    alignSelf: 'flex-start',
-    marginLeft: space.md,
-    marginTop: space.xs,
-  },
-  hero: { alignItems: 'center', paddingTop: space.group, gap: space.xs },
+  hero: { alignItems: 'center', paddingTop: space.sm, gap: space.xs },
   free: {
     fontFamily: type.body,
     fontSize: type.size.sm,

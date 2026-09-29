@@ -61,7 +61,7 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
   return (
     <LinearGradient colors={theme.bg} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
+        <View style={ui.modalTopBar}>
           <BackButton onPress={() => navigation.goBack()} tone="moss" />
           <View style={styles.topTitle}>
             <CategoryIcon name={district.id} size={16} color={theme.accent} />
@@ -155,14 +155,6 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-    paddingTop: space.xs,
-    minHeight: layout.hitTarget,
-  },
   topSpacer: { width: layout.backSize, height: layout.backSize },
   topTitle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flex: 1, justifyContent: 'center' },
   topName: { fontFamily: type.bodyBold, fontSize: type.size.sm + 1, color: colors.parchment },

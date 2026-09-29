@@ -85,8 +85,14 @@ export function AssignScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.moss900 },
-  header: { padding: space.lg, borderBottomWidth: 1, borderBottomColor: colors.moss700 },
-  back: { marginBottom: space.sm },
+  header: {
+    paddingHorizontal: space.md,
+    paddingTop: space.md,
+    paddingBottom: space.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.moss700,
+  },
+  back: { marginBottom: space.group },
   title: { fontFamily: type.display, fontSize: type.size.xl, color: colors.parchment },
   vault: { fontFamily: type.display, fontSize: type.size.xxl, color: colors.inkGoldBright, marginTop: space.xs },
   sub: {

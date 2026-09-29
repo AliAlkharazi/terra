@@ -319,4 +319,16 @@ export const ui = StyleSheet.create({
     gap: space.tight,
     ...shadow.dock,
   },
+
+  /** Shared top chrome padding for custom bars (matches ModalTopBar) */
+  modalTopBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: layout.screenPad,
+    paddingTop: space.md,
+    paddingBottom: space.group,
+    marginBottom: space.sm,
+    minHeight: layout.hitTarget + space.md + space.group,
+  },
 });

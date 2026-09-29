@@ -32,9 +32,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: layout.screenPad,
-    paddingTop: space.xs,
-    marginBottom: space.group,
-    minHeight: layout.hitTarget,
+    paddingTop: space.md,
+    paddingBottom: space.group,
+    marginBottom: space.sm,
+    minHeight: layout.hitTarget + space.md + space.group,
   },
   title: {
     flex: 1,
@@ -51,8 +52,7 @@ const styles = StyleSheet.create({
   },
   slot: {
     width: layout.backSize,
-    minWidth: layout.hitTarget,
-    minHeight: layout.hitTarget,
+    height: layout.backSize,
     alignItems: 'center',
     justifyContent: 'center',
   },

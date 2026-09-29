@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
-import { BackButton } from '@/components/ui/BackButton';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { MoneyKeypad, appendAmount } from '@/components/MoneyKeypad';
 import { colors, radius, space, type } from '@/theme/tokens';
@@ -26,7 +26,7 @@ export function DepositScreen({ navigation }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <BackButton onPress={() => navigation.goBack()} tone="moss" style={styles.close} />
+        <ModalTopBar title="Deposit" onBack={() => navigation.goBack()} tone="moss" />
 
         <View style={styles.hero}>
           <Text style={[ui.amountHero, amount === 0 && ui.amountHeroDim]}>€{amount || 0}</Text>
@@ -58,11 +58,6 @@ export function DepositScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.moss900 },
-  close: {
-    alignSelf: 'flex-start',
-    marginLeft: space.md,
-    marginTop: space.xs,
-  },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.lg },
   chip: {
     flexDirection: 'row',
