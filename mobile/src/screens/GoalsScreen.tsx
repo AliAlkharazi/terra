@@ -6,7 +6,7 @@ import { TapButton } from '@/components/TapButton';
 import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { useGoalsStore } from '@/store/goalsStore';
 import { PrimaryButton } from '@/components/ui/PrimaryButton';
-import { colors, gradients, radius, space, type } from '@/theme/tokens';
+import { colors, gradients, layout, radius, space, type } from '@/theme/tokens';
 import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -104,13 +104,15 @@ const styles = StyleSheet.create({
   },
   plusMark: { fontSize: 40, color: colors.inkGold, marginTop: -2, fontFamily: type.body },
   hint: { fontFamily: type.body, fontSize: type.size.sm, color: colors.sage300 },
-  list: { padding: space.lg, gap: space.group, flex: 1 },
+  list: { paddingHorizontal: space.lg, paddingBottom: space.xl, gap: space.group, flex: 1 },
   card: {
     backgroundColor: colors.glassStrong,
     borderRadius: radius.card,
     padding: space.md,
+    borderWidth: 1,
+    borderColor: colors.hairline,
   },
-  cardName: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.parchment },
+  cardName: { fontFamily: type.bodyBold, fontSize: type.size.md, color: colors.parchment },
   cardMeta: {
     fontFamily: type.body,
     fontSize: type.size.sm,
@@ -118,23 +120,26 @@ const styles = StyleSheet.create({
     marginTop: space.xs,
   },
   plusSmall: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: layout.hitTarget,
+    height: layout.hitTarget,
+    borderRadius: layout.hitTarget / 2,
     borderWidth: 1.5,
     borderColor: colors.goldBorder,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
     marginTop: space.md,
+    backgroundColor: colors.glass,
   },
-  plusMarkSmall: { fontSize: 28, color: colors.inkGold, marginTop: -2 },
+  plusMarkSmall: { fontSize: type.size.xl, color: colors.inkGold, marginTop: -2 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.md },
   chip: {
     backgroundColor: colors.parchmentDim,
     borderRadius: radius.pill,
     paddingHorizontal: space.group,
     paddingVertical: space.sm,
+    minHeight: 36,
+    justifyContent: 'center',
   },
   chipText: { fontFamily: type.body, fontSize: type.size.sm, color: colors.moss800 },
   save: { marginTop: space.lg },

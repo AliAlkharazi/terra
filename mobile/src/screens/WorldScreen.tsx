@@ -187,15 +187,12 @@ export function WorldScreen({ navigation }: Props) {
 function GoalsLaunch({ onOpen, focused }: { onOpen: () => void; focused: boolean }) {
   const x = useSharedValue(0);
   const y = useSharedValue(0);
-  const rot = useSharedValue(18);
   const fade = useSharedValue(1);
   const bob = useSharedValue(0);
-  const tug = useSharedValue(0);
   const flying = useRef(false);
 
   const startIdle = () => {
-    bob.value = withRepeat(withTiming(-5, { duration: 1600, easing: Easing.inOut(Easing.sin) }), -1, true);
-    tug.value = withRepeat(withTiming(8, { duration: 2200, easing: Easing.inOut(Easing.sin) }), -1, true);
+    bob.value = withRepeat(withTiming(-3, { duration: 1800, easing: Easing.inOut(Easing.sin) }), -1, true);
   };
 
   useEffect(() => {
@@ -207,7 +204,6 @@ function GoalsLaunch({ onOpen, focused }: { onOpen: () => void; focused: boolean
     flying.current = false;
     x.value = 0;
     y.value = 0;
-    rot.value = 18;
     fade.value = 1;
     startIdle();
   }, [focused]);
@@ -216,29 +212,27 @@ function GoalsLaunch({ onOpen, focused }: { onOpen: () => void; focused: boolean
     if (flying.current) return;
     flying.current = true;
     bob.value = withTiming(0, { duration: 80 });
-    tug.value = withTiming(0, { duration: 80 });
-    x.value = withTiming(160, { duration: 520, easing: Easing.in(Easing.cubic) });
-    y.value = withTiming(-40, { duration: 520, easing: Easing.out(Easing.cubic) });
-    rot.value = withTiming(8, { duration: 520 });
-    fade.value = withTiming(0, { duration: 420 }, (finished) => {
+    // Stay level (0°) — slide up/out, no tilt
+    x.value = withTiming(28, { duration: 420, easing: Easing.in(Easing.cubic) });
+    y.value = withTiming(-36, { duration: 420, easing: Easing.out(Easing.cubic) });
+    fade.value = withTiming(0, { duration: 360 }, (finished) => {
       if (finished) runOnJS(onOpen)();
     });
   };
 
   const planeStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: x.value + tug.value },
+      { translateX: x.value },
       { translateY: y.value + bob.value },
-      { rotate: `${rot.value}deg` },
     ],
     opacity: fade.value,
   }));
 
   return (
-    <TapButton onPress={takeOff} style={styles.goals} pressedScale={0.98}>
+    <TapButton onPress={takeOff} style={styles.goals} pressedScale={0.96} hoverScale={1.03}>
       <Animated.View style={[styles.goalsInner, planeStyle]}>
         <Text style={styles.goalsLabel}>Goals</Text>
-        <GoalAirplane size={108} />
+        <GoalAirplane size={52} />
       </Animated.View>
     </TapButton>
   );
@@ -297,21 +291,30 @@ const styles = StyleSheet.create({
   },
   mapWrap: { flex: 1, justifyContent: 'center', paddingVertical: space.sm },
   skyLane: {
-    height: 92,
-    marginTop: space.sm,
+    height: 64,
+    marginTop: space.xs,
     zIndex: 6,
     overflow: 'visible',
   },
   goals: {
     position: 'absolute',
-    right: -64,
-    top: space.sm,
-    width: 180,
+    right: space.md,
+    top: 0,
+    minHeight: layout.hitTarget,
+    justifyContent: 'center',
   },
   goalsInner: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: space.xs,
+    gap: space.sm,
+    backgroundColor: colors.glassInk,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    paddingLeft: space.md,
+    paddingRight: space.group,
+    paddingVertical: space.sm,
+    minHeight: layout.hitTarget,
   },
   dockPrimary: {
     flexDirection: 'row',
@@ -365,21 +368,27 @@ const styles = StyleSheet.create({
     fontSize: type.size.sm,
     color: colors.dimOnMoss,
   },
-  account: { position: 'absolute', top: 56, left: space.md, zIndex: 8 },
+  account: {
+    position: 'absolute',
+    top: 56,
+    left: space.md,
+    zIndex: 8,
+    minHeight: layout.hitTarget - 4,
+    justifyContent: 'center',
+  },
   accountText: {
     backgroundColor: colors.glassInk,
     overflow: 'hidden',
     borderRadius: radius.pill,
-    paddingHorizontal: space.group,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    paddingHorizontal: space.md,
     paddingVertical: space.sm,
   },
   goalsLabel: {
     fontFamily: type.bodyBold,
-    fontSize: type.size.xs,
-    color: colors.parchment,
-    textShadowColor: 'rgba(10,18,12,0.7)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-    width: 44,
+    fontSize: type.size.sm,
+    color: colors.inkGoldBright,
+    letterSpacing: 0.3,
   },
 });
