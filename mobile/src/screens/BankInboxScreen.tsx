@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import { TapButton } from '@/components/TapButton';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { colors, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { useBudgetStore } from '@/store/budgetStore';
@@ -29,13 +30,7 @@ export function BankInboxScreen({ navigation }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
-          <Text style={styles.title}>Uncategorized</Text>
-          <View style={styles.back} />
-        </View>
+        <ModalTopBar title="Uncategorized" onBack={() => navigation.goBack()} />
 
         <Text style={styles.lead}>
           Bank spends land here until you assign a district. Suggested matches from keywords are already
@@ -103,24 +98,6 @@ function InboxRow({
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.creamLift },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-    paddingTop: space.xs,
-    marginBottom: space.sm,
-  },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.parchmentDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { fontSize: 18, color: colors.moss800 },
-  title: { fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
   lead: {
     fontFamily: type.body,
     fontSize: 13,

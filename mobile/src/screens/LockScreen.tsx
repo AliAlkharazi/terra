@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
+import { BackButton } from '@/components/ui/BackButton';
 import { MoneyKeypad, appendAmount } from '@/components/MoneyKeypad';
 import { colors, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
@@ -42,9 +43,7 @@ export function LockScreen({ navigation }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <TapButton onPress={() => navigation.goBack()} style={styles.close} pressedScale={0.9}>
-          <Text style={styles.closeText}>✕</Text>
-        </TapButton>
+        <BackButton onPress={() => navigation.goBack()} tone="moss" style={styles.close} />
 
         <View style={styles.hero}>
           <Text style={styles.kicker}>Freeze</Text>
@@ -115,14 +114,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginLeft: space.md,
     marginTop: space.xs,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.glass,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  closeText: { color: colors.parchment, fontSize: type.size.base, fontFamily: type.bodyBold },
   hero: { alignItems: 'center', paddingTop: space.group, gap: space.xs },
   kicker: {
     fontFamily: type.bodyBold,

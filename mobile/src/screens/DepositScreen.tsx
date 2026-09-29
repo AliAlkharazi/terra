@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
+import { BackButton } from '@/components/ui/BackButton';
 import { MoneyKeypad, appendAmount } from '@/components/MoneyKeypad';
 import { colors, radius, space, type } from '@/theme/tokens';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -24,9 +25,7 @@ export function DepositScreen({ navigation }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <TapButton onPress={() => navigation.goBack()} style={styles.close} pressedScale={0.9}>
-          <Text style={styles.closeText}>✕</Text>
-        </TapButton>
+        <BackButton onPress={() => navigation.goBack()} tone="moss" style={styles.close} />
 
         <View style={styles.hero}>
           <Text style={[styles.amount, amount === 0 && styles.amountDim]}>€{amount || 0}</Text>
@@ -58,14 +57,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
     marginLeft: space.md,
     marginTop: space.xs,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.glass,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
-  closeText: { color: colors.parchment, fontSize: type.size.base, fontFamily: type.bodyBold },
   hero: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.lg },
   amount: {
     fontFamily: type.display,

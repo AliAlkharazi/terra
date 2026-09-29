@@ -5,9 +5,10 @@ import { themeFor } from '@/theme/categoryTheme';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
+import { BackButton } from '@/components/ui/BackButton';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { MoneyStack } from '@/components/money/MoneyStack';
-import { colors, radius, space, type } from '@/theme/tokens';
+import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
@@ -59,14 +60,12 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
     <LinearGradient colors={theme.bg} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
         <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
+          <BackButton onPress={() => navigation.goBack()} tone="moss" />
           <View style={styles.topTitle}>
             <CategoryIcon name={district.id} size={16} color={theme.accent} />
             <Text style={[styles.topName, { color: theme.ink }]}>{district.label}</Text>
           </View>
-          <View style={styles.back} />
+          <View style={styles.topSpacer} />
         </View>
 
         <View style={styles.hero}>
@@ -153,49 +152,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: space.md,
+    paddingTop: space.xs,
+    minHeight: layout.hitTarget,
   },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(240,234,214,0.1)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { color: colors.parchment, fontSize: 18 },
-  topTitle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  topName: { fontFamily: type.bodyBold, fontSize: 15, color: colors.parchment },
-  hero: { alignItems: 'center', paddingTop: space.xl, paddingBottom: space.md },
+  topSpacer: { width: layout.backSize, height: layout.backSize },
+  topTitle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flex: 1, justifyContent: 'center' },
+  topName: { fontFamily: type.bodyBold, fontSize: type.size.sm + 1, color: colors.parchment },
+  hero: { alignItems: 'center', paddingTop: space.xl, paddingBottom: space.md, gap: space.xs },
   huge: {
     fontFamily: type.display,
-    fontSize: 64,
+    fontSize: 56,
     color: colors.parchment,
     letterSpacing: -1,
   },
   hugeOver: { color: colors.coral500 },
-  heroHint: { fontFamily: type.body, fontSize: 14, color: colors.sage300, marginTop: 4 },
+  heroHint: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.sage300,
+    marginTop: space.xs,
+  },
   stack: { marginTop: space.lg, minHeight: 70, justifyContent: 'center' },
   cover: {
     alignSelf: 'center',
     backgroundColor: colors.coral500,
     borderRadius: radius.pill,
     paddingHorizontal: space.lg,
-    paddingVertical: space.sm,
+    paddingVertical: space.group,
+    minHeight: 44,
+    justifyContent: 'center',
   },
   coverText: { fontFamily: type.bodyBold, color: colors.moss900 },
-  list: { padding: space.lg },
-  empty: { fontFamily: type.body, color: colors.textOnMossDim, textAlign: 'center', marginTop: space.xl },
+  list: { padding: space.lg, gap: 0 },
+  empty: {
+    fontFamily: type.body,
+    color: colors.textOnMossDim,
+    textAlign: 'center',
+    marginTop: space.xl,
+  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: space.sm,
-    borderBottomWidth: 1,
+    paddingVertical: space.group,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.moss700,
   },
   note: { fontFamily: type.body, fontSize: type.size.base, color: colors.parchment },
-  noteDark: { flex: 1, fontFamily: type.body, fontSize: type.size.base, color: colors.textOnParchment, marginLeft: 8 },
-  date: { fontFamily: type.body, fontSize: type.size.xs, color: colors.textOnMossDim, marginTop: 2 },
+  noteDark: {
+    flex: 1,
+    fontFamily: type.body,
+    fontSize: type.size.base,
+    color: colors.textOnParchment,
+    marginLeft: space.sm,
+  },
+  date: {
+    fontFamily: type.body,
+    fontSize: type.size.xs,
+    color: colors.textOnMossDim,
+    marginTop: space.xs,
+  },
   amount: { fontFamily: type.mono, fontSize: type.size.base, color: colors.parchment },
   amountDark: { fontFamily: type.mono, fontSize: type.size.base, color: colors.textOnParchment },
   bar: { flexDirection: 'row', gap: space.sm, padding: space.lg },
@@ -203,26 +219,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.moss700,
     borderRadius: radius.md,
-    paddingVertical: space.md,
+    paddingVertical: space.group,
+    minHeight: 48,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   barBtnMain: { backgroundColor: colors.ember500 },
   barBtnText: { fontFamily: type.bodyBold, color: colors.parchment },
   barBtnMainText: { color: colors.moss900 },
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: colors.backdrop, justifyContent: 'flex-end' },
   sheet: {
     backgroundColor: colors.parchment,
     borderTopLeftRadius: radius.lg,
     borderTopRightRadius: radius.lg,
     padding: space.lg,
+    paddingBottom: 40,
   },
-  sheetTitle: { fontFamily: type.display, fontSize: type.size.lg, color: colors.textOnParchment, marginBottom: space.md },
+  sheetTitle: {
+    fontFamily: type.display,
+    fontSize: type.size.lg,
+    color: colors.textOnParchment,
+    marginBottom: space.md,
+  },
   donor: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: space.sm,
-    borderBottomWidth: 1,
+    paddingVertical: space.group,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.parchmentDim,
   },
-  cancel: { fontFamily: type.body, textAlign: 'center', color: colors.textOnParchmentDim, marginTop: space.md },
+  cancel: {
+    fontFamily: type.body,
+    textAlign: 'center',
+    color: colors.textOnParchmentDim,
+    marginTop: space.md,
+    paddingVertical: space.sm,
+  },
 });

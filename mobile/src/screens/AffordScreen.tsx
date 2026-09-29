@@ -6,6 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { useSpendMemoryStore } from '@/store/spendMemoryStore';
 import { TapButton } from '@/components/TapButton';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { computeAffordability, type AffordVerdict } from '@/engine/afford';
 import { estimateMarketPrice } from '@/engine/estimatePrice';
 import { parseWant } from '@/engine/wantParse';
@@ -72,13 +73,7 @@ export function AffordScreen({ navigation }: Props) {
     <LinearGradient colors={['#141C12', '#101610', '#0C120E']} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
         <KeyboardAvoidingView style={styles.fill} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-          <View style={styles.topBar}>
-            <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-              <Text style={styles.backText}>←</Text>
-            </TapButton>
-            <Text style={styles.title}>Can I buy this?</Text>
-            <View style={styles.back} />
-          </View>
+          <ModalTopBar title="Can I buy this?" onBack={() => navigation.goBack()} tone="moss" />
 
           <View style={styles.body}>
             <Text style={styles.lead}>Say it simply — it knows what things usually cost.</Text>
@@ -128,22 +123,6 @@ export function AffordScreen({ navigation }: Props) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-  },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.glassStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { color: colors.parchment, fontSize: 18 },
-  title: { fontFamily: type.display, fontSize: 20, color: colors.parchment },
   body: { flex: 1, padding: space.lg, gap: space.md },
   lead: { fontFamily: type.body, fontSize: 15, color: colors.sage300 },
   input: {

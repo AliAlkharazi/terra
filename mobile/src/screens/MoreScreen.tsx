@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
 import { CategoryIcon } from '@/components/CategoryIcon';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { themeFor } from '@/theme/categoryTheme';
 import { formatEuro } from '@/theme/money';
@@ -27,13 +28,7 @@ export function MoreScreen({ navigation }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
-          <Text style={styles.title}>Activity</Text>
-          <View style={styles.back} />
-        </View>
+        <ModalTopBar title="Activity" onBack={() => navigation.goBack()} />
 
         <View style={styles.bankBar}>
           <TapButton style={styles.bankBtn} onPress={() => navigation.navigate('ConnectBank')}>
@@ -86,24 +81,6 @@ function ActivityRow({ item, labels }: { item: ActivityItem; labels: Record<stri
 
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.creamLift },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-    paddingTop: space.xs,
-    marginBottom: space.group,
-  },
-  back: {
-    width: layout.backSize,
-    height: layout.backSize,
-    borderRadius: layout.backSize / 2,
-    backgroundColor: colors.parchmentDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { fontSize: type.size.md, color: colors.moss800, fontFamily: type.bodyBold },
-  title: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
   bankBar: {
     flexDirection: 'row',
     gap: space.sm,

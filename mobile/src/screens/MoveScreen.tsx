@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
 import { MoneyKeypad, appendAmount } from '@/components/MoneyKeypad';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { colors, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { CategoryIcon } from '@/components/CategoryIcon';
@@ -87,13 +88,7 @@ export function MoveScreen({ navigation, route }: Props) {
   return (
     <View style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
-          <Text style={styles.title}>Move money</Text>
-          <View style={styles.back} />
-        </View>
+        <ModalTopBar title="Move money" onBack={() => navigation.goBack()} />
 
         <View style={styles.cards}>
           <PocketCard
@@ -186,17 +181,7 @@ function PocketCard({
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: '#F4F1EA' },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-    paddingTop: space.xs,
-  },
-  back: { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.parchmentDim, alignItems: 'center', justifyContent: 'center' },
-  backText: { fontSize: 18, color: colors.moss800 },
-  title: { fontFamily: type.bodyBold, fontSize: 16, color: colors.moss900 },
+  fill: { flex: 1, backgroundColor: colors.creamLift },
   cards: { flex: 1, paddingHorizontal: space.md, paddingTop: space.lg, gap: 0 },
   card: {
     backgroundColor: colors.cream,

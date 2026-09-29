@@ -66,14 +66,15 @@ function place(pad: Pad, size: number, sceneW: number, sceneH: number) {
   };
 }
 
-const HIT = 52;
+/** Tap targets sized for thumb; slightly larger than visual pad to avoid mis-taps */
+const HIT = 58;
 
 function hitBox(pad: Pad, sceneW: number, sceneH: number, extra = 0) {
   const w = HIT + extra;
-  const h = HIT + 18;
+  const h = HIT + 22;
   return {
     left: (pad.x / SCENE_W) * sceneW - w / 2,
-    top: (pad.y / SCENE_H) * sceneH - h * 0.72,
+    top: (pad.y / SCENE_H) * sceneH - h * 0.7,
     width: w,
     height: h,
     zIndex: Math.round(pad.y) + 80,
@@ -176,25 +177,28 @@ const styles = StyleSheet.create({
   spot: {
     position: 'absolute',
     alignItems: 'center',
+    paddingHorizontal: 4,
   },
   hit: {
     position: 'absolute',
   },
   caption: {
-    marginTop: -4,
+    marginTop: -2,
+    maxWidth: '100%',
     fontFamily: type.bodyBold,
-    fontSize: type.size.sm,
+    fontSize: type.size.xs + 1,
     color: '#FFF8E4',
     textAlign: 'center',
-    letterSpacing: 0.2,
+    letterSpacing: 0.15,
     textShadowColor: 'rgba(8, 14, 10, 0.95)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
   },
   amount: {
     marginTop: 2,
+    maxWidth: '100%',
     fontFamily: type.mono,
-    fontSize: type.size.sm,
+    fontSize: type.size.xs + 1,
     color: colors.inkGold,
     textAlign: 'center',
     textShadowColor: 'rgba(8, 14, 10, 0.95)',

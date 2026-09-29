@@ -13,6 +13,7 @@ import { WebView } from 'react-native-webview';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import { TapButton } from '@/components/TapButton';
+import { ModalTopBar as TopBar } from '@/components/ui/ModalTopBar';
 import { colors, radius, space, type } from '@/theme/tokens';
 import { useAuthStore } from '@/store/authStore';
 import { useBudgetStore } from '@/store/budgetStore';
@@ -248,38 +249,8 @@ export function ConnectBankScreen({ navigation }: Props) {
   );
 }
 
-function TopBar({ title, onBack }: { title: string; onBack: () => void }) {
-  return (
-    <View style={styles.topBar}>
-      <TapButton onPress={onBack} style={styles.back} pressedScale={0.9}>
-        <Text style={styles.backText}>←</Text>
-      </TapButton>
-      <Text style={styles.title}>{title}</Text>
-      <View style={styles.back} />
-    </View>
-  );
-}
-
 const styles = StyleSheet.create({
   fill: { flex: 1, backgroundColor: colors.creamLift },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-    paddingTop: space.xs,
-    marginBottom: space.group,
-  },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.parchmentDim,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { fontSize: type.size.md, color: colors.moss800, fontFamily: type.bodyBold },
-  title: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
   pad: { paddingHorizontal: space.md },
   lead: {
     fontFamily: type.body,

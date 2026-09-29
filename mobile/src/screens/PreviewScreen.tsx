@@ -5,6 +5,7 @@ import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withDelay, with
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { colors, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
@@ -47,13 +48,7 @@ export function PreviewScreen({ navigation }: Props) {
   return (
     <LinearGradient colors={['#141C12', '#101610', '#0C120E']} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
-          <Text style={styles.title}>Preview</Text>
-          <View style={styles.back} />
-        </View>
+        <ModalTopBar title="Preview" onBack={() => navigation.goBack()} tone="moss" />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <Animated.View entering={FadeInDown.duration(320)} style={styles.hero}>
@@ -233,22 +228,6 @@ function Metric({ label, value, tint }: { label: string; value: string; tint?: s
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   flex: { flex: 1 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-  },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.glassStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { color: colors.parchment, fontSize: 18 },
-  title: { fontFamily: type.display, fontSize: 22, color: colors.parchment },
   content: { padding: space.md, paddingBottom: space.xxl, gap: space.sm },
   hero: { marginBottom: 6 },
   kicker: { fontFamily: type.bodyBold, fontSize: 11, color: colors.gold500, letterSpacing: 1 },
@@ -281,8 +260,8 @@ const styles = StyleSheet.create({
     width: 40,
     alignItems: 'center',
     borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 3,
+    borderRadius: radius.sm,
+    paddingVertical: space.xs,
   },
   dateDay: { fontFamily: type.display, fontSize: 15, color: colors.parchment, lineHeight: 18 },
   dateMon: { fontFamily: type.bodyBold, fontSize: 9, color: colors.sage300, textTransform: 'uppercase' },
@@ -297,7 +276,7 @@ const styles = StyleSheet.create({
     padding: space.group,
   },
   buildLeft: { flex: 1 },
-  buildTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  buildTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   buildName: { fontFamily: type.bodyBold, fontSize: 15 },
   buildAmt: { fontFamily: type.display, fontSize: 20, color: colors.parchment, marginTop: 6 },
   trend: { fontFamily: type.bodyBold, fontSize: 15, color: colors.sage300 },

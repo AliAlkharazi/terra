@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '@/store/budgetStore';
 import { TapButton } from '@/components/TapButton';
+import { ModalTopBar } from '@/components/ui/ModalTopBar';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { HealthRing } from '@/components/HealthRing';
 import { colors, healthColor, radius, space, type } from '@/theme/tokens';
@@ -61,13 +62,7 @@ export function ReportsScreen({ navigation }: Props) {
   return (
     <LinearGradient colors={['#141C12', '#101610', '#0C120E']} style={styles.fill}>
       <SafeAreaView style={styles.fill}>
-        <View style={styles.topBar}>
-          <TapButton onPress={() => navigation.goBack()} style={styles.back} pressedScale={0.9}>
-            <Text style={styles.backText}>←</Text>
-          </TapButton>
-          <Text style={styles.title}>Insights</Text>
-          <View style={styles.back} />
-        </View>
+        <ModalTopBar title="Insights" onBack={() => navigation.goBack()} tone="moss" />
 
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={styles.hero}>
@@ -209,22 +204,6 @@ function LegendDot({ color, label }: { color: string; label: string }) {
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: space.md,
-  },
-  back: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.glassStrong,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  backText: { color: colors.parchment, fontSize: 18 },
-  title: { fontFamily: type.display, fontSize: 22, color: colors.parchment },
   content: { padding: space.md, paddingBottom: space.xxl, gap: space.group },
   hero: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   ringWrap: { width: 118, height: 118, alignItems: 'center', justifyContent: 'center' },
@@ -302,16 +281,27 @@ const styles = StyleSheet.create({
   applyTextDone: { color: colors.parchment },
   paceRow: {
     flexDirection: 'row',
-    backgroundColor: 'rgba(240,234,214,0.07)',
+    backgroundColor: colors.glass,
     borderRadius: radius.md,
     overflow: 'hidden',
   },
-  paceStripe: { width: 5 },
-  paceBody: { flex: 1, padding: 12 },
-  paceTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  paceName: { flex: 1, fontFamily: type.bodyBold, fontSize: 15 },
-  paceTag: { fontFamily: type.bodyBold, fontSize: 11, color: colors.sage300 },
-  paceTrack: { height: 6, borderRadius: 3, backgroundColor: 'rgba(240,234,214,0.12)', marginTop: 8, overflow: 'hidden' },
+  paceStripe: { width: 4 },
+  paceBody: { flex: 1, padding: space.group },
+  paceTop: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  paceName: { flex: 1, fontFamily: type.bodyBold, fontSize: type.size.sm + 1 },
+  paceTag: { fontFamily: type.bodyBold, fontSize: type.size.xs, color: colors.sage300 },
+  paceTrack: {
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.glassStrong,
+    marginTop: space.sm,
+    overflow: 'hidden',
+  },
   paceFill: { height: 6, borderRadius: 3 },
-  paceMeta: { fontFamily: type.body, fontSize: 11, color: colors.textOnMossDim, marginTop: 6 },
+  paceMeta: {
+    fontFamily: type.body,
+    fontSize: type.size.xs,
+    color: colors.textOnMossDim,
+    marginTop: space.sm,
+  },
 });
