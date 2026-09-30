@@ -5,28 +5,31 @@ import type { AllocationState, District, DistrictId, PocketId } from '@/types';
 import { colors, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { themeFor } from '@/theme/categoryTheme';
-import { BUILDING_BY_ID, SceneSparkles, VaultBuilding } from './buildings';
+import { buildingLevel } from '@/engine/buildings';
+import { BUILDING_BY_ID, EmptyPlotBuilding, SceneSparkles, VaultBuilding } from './buildings';
 
 interface Props {
   districts: District[];
   allocationStates: AllocationState[];
   vaultAmount: number;
   lockedAmount?: number;
+  /** districtId → lifetime funded (0 / missing = empty plot) */
+  placedFunded: Partial<Record<DistrictId, number>>;
   onDistrictPress: (districtId: DistrictId) => void;
+  onEmptyPlotPress: (districtId: DistrictId) => void;
   onVaultPress: () => void;
 }
 
 const SCENE_W = 440;
 const SCENE_H = 400;
-/** Slightly smaller buildings + wider pad grid → less clumping */
 const VAULT_SIZE = 176;
 const BUILDING_SIZE = 142;
+const EMPTY_SIZE = 118;
 
 type Pad = { x: number; y: number; rx: number; ry: number; theme?: PocketId };
 
 const CX = 220;
 const CY = 196;
-/** Horizontal / vertical pad spacing (isometric village grid) */
 const DX = 114;
 const DY = 82;
 
@@ -39,19 +42,20 @@ const PADS: Record<string, Pad> = {
   transport: { x: CX, y: CY + DY + 30, rx: 36, ry: 15, theme: 'transport' },
 };
 
-function GrassPad({ pad }: { pad: Pad }) {
+function GrassPad({ pad, empty }: { pad: Pad; empty?: boolean }) {
   const theme = pad.theme ? themeFor(pad.theme) : null;
+  const padFill = empty ? '#6FA84A' : theme?.pad ?? '#8FCB62';
   return (
     <>
       <Ellipse cx={pad.x} cy={pad.y + 8} rx={pad.rx} ry={pad.ry} fill={theme?.padShadow ?? '#3A6F34'} />
-      <Ellipse cx={pad.x} cy={pad.y} rx={pad.rx} ry={pad.ry} fill={theme?.pad ?? '#8FCB62'} opacity={0.92} />
+      <Ellipse cx={pad.x} cy={pad.y} rx={pad.rx} ry={pad.ry} fill={padFill} opacity={empty ? 0.7 : 0.92} />
       <Ellipse
         cx={pad.x}
         cy={pad.y - pad.ry * 0.12}
         rx={pad.rx * 0.48}
         ry={pad.ry * 0.38}
         fill={theme?.ink ?? '#B6E07A'}
-        opacity={0.28}
+        opacity={empty ? 0.14 : 0.28}
       />
     </>
   );
@@ -66,7 +70,6 @@ function place(pad: Pad, size: number, sceneW: number, sceneH: number) {
   };
 }
 
-/** Tap targets sized for thumb; slightly larger than visual pad to avoid mis-taps */
 const HIT = 58;
 
 function hitBox(pad: Pad, sceneW: number, sceneH: number, extra = 0) {
@@ -86,7 +89,9 @@ export function VillageMap({
   allocationStates,
   vaultAmount,
   lockedAmount = 0,
+  placedFunded,
   onDistrictPress,
+  onEmptyPlotPress,
   onVaultPress,
 }: Props) {
   const { width } = useWindowDimensions();
@@ -100,8 +105,11 @@ export function VillageMap({
     .map((district) => {
       const pad = PADS[district.id];
       const state = allocationStates.find((s) => s.districtId === district.id);
+      const funded = placedFunded[district.id];
+      const placed = funded != null && funded > 0;
+      const level = placed ? buildingLevel(funded) : 0;
       const Building = BUILDING_BY_ID[district.id as Exclude<DistrictId, 'credit_card_payment'>];
-      return { district, pad, state, Building };
+      return { district, pad, state, Building, placed, level, funded: funded ?? 0 };
     })
     .sort((a, b) => a.pad.y - b.pad.y);
 
@@ -128,9 +136,11 @@ export function VillageMap({
 
         <Ellipse cx={CX} cy={CY - 28} rx="88" ry="68" fill="url(#vaultGlow)" />
 
-        {Object.values(PADS).map((pad) => (
-          <GrassPad key={`${pad.x}-${pad.y}`} pad={pad} />
-        ))}
+        {Object.entries(PADS).map(([key, pad]) => {
+          if (key === 'vault') return <GrassPad key={key} pad={pad} />;
+          const empty = placedFunded[key as DistrictId] == null;
+          return <GrassPad key={key} pad={pad} empty={empty} />;
+        })}
 
         <SceneSparkles />
       </Svg>
@@ -146,23 +156,44 @@ export function VillageMap({
         ) : null}
       </View>
 
-      {spots.map(({ district, pad, state, Building }) => (
-        <View key={district.id} pointerEvents="none" style={[styles.spot, place(pad, BUILDING_SIZE, sceneW, sceneH)]}>
-          <Building size={BUILDING_SIZE} overspent={state?.isOverspent} />
+      {spots.map(({ district, pad, state, Building, placed, level }) => (
+        <View
+          key={district.id}
+          pointerEvents="none"
+          style={[styles.spot, place(pad, placed ? BUILDING_SIZE : EMPTY_SIZE, sceneW, sceneH)]}
+        >
+          {placed ? (
+            <Building size={BUILDING_SIZE} overspent={state?.isOverspent} />
+          ) : (
+            <EmptyPlotBuilding size={EMPTY_SIZE} />
+          )}
           <Text style={[styles.caption, { color: themeFor(district.id).ink }]} numberOfLines={1}>
-            {district.label}
+            {placed ? district.label : 'Build'}
           </Text>
-          <Text style={[styles.amount, { color: themeFor(district.id).accent }, state?.isOverspent && styles.amountOverspent]}>
-            {formatEuro(state?.available ?? 0, { cents: false })}
-          </Text>
+          {placed ? (
+            <>
+              <Text
+                style={[
+                  styles.amount,
+                  { color: themeFor(district.id).accent },
+                  state?.isOverspent && styles.amountOverspent,
+                ]}
+              >
+                {formatEuro(state?.available ?? 0, { cents: false })}
+              </Text>
+              <Text style={styles.level}>Lv {level}</Text>
+            </>
+          ) : (
+            <Text style={styles.amountDim}>{district.label}</Text>
+          )}
         </View>
       ))}
 
       <Pressable onPress={onVaultPress} style={[styles.hit, hitBox(PADS.vault, sceneW, sceneH, 14)]} />
-      {spots.map(({ district, pad }) => (
+      {spots.map(({ district, pad, placed }) => (
         <Pressable
           key={`hit-${district.id}`}
-          onPress={() => onDistrictPress(district.id)}
+          onPress={() => (placed ? onDistrictPress(district.id) : onEmptyPlotPress(district.id))}
           style={[styles.hit, hitBox(pad, sceneW, sceneH)]}
         />
       ))}
@@ -204,6 +235,26 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(8, 14, 10, 0.95)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 5,
+  },
+  amountDim: {
+    marginTop: 2,
+    fontFamily: type.body,
+    fontSize: type.size.micro,
+    color: colors.sage300,
+    textAlign: 'center',
+    textShadowColor: 'rgba(8, 14, 10, 0.95)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
+  level: {
+    marginTop: 1,
+    fontFamily: type.bodyBold,
+    fontSize: type.size.micro,
+    color: colors.inkGoldBright,
+    letterSpacing: 0.4,
+    textShadowColor: 'rgba(8, 14, 10, 0.95)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   frozenAmt: {
     fontSize: type.size.micro,

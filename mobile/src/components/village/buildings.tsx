@@ -388,6 +388,38 @@ export function SceneSparkles() {
   );
 }
 
+/** Empty plot scaffold — Clash-style “build here” marker. */
+export function EmptyPlotBuilding({ size = 120 }: BuildingSvgProps) {
+  const ox = 48;
+  const oy = 92;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 96 110">
+      <Ellipse cx={48} cy={98} rx={28} ry={8} fill="#0E1A12" opacity={0.22} />
+      {/* dashed pad ring feel */}
+      <Ellipse cx={48} cy={88} rx={30} ry={12} fill="none" stroke="#F4E6A8" strokeWidth={1.6} strokeDasharray="4 3" opacity={0.7} />
+      <IsoBox ox={ox - 10} oy={oy} w={8} depth={8} h={14} top="#C9A24A" left="#8A7028" right="#E8C45A" />
+      <IsoBox ox={ox + 6} oy={oy + 2} w={7} depth={7} h={10} top="#D4B25A" left="#8A7028" right="#F0D078" />
+      {/* + flag */}
+      <Path
+        d={`M${iso(4, 4, 16, ox - 10, oy).x} ${iso(4, 4, 16, ox - 10, oy).y} L${iso(4, 4, 28, ox - 10, oy).x} ${iso(4, 4, 28, ox - 10, oy).y}`}
+        stroke="#F4E6A8"
+        strokeWidth={2}
+      />
+      <Circle cx={iso(4, 4, 30, ox - 10, oy).x} cy={iso(4, 4, 30, ox - 10, oy).y} r={5} fill="#E8A24B" />
+      <SvgText
+        x={iso(4, 4, 30, ox - 10, oy).x}
+        y={iso(4, 4, 30, ox - 10, oy).y + 3.5}
+        fill="#1B2E24"
+        fontSize="8"
+        fontWeight="700"
+        textAnchor="middle"
+      >
+        +
+      </SvgText>
+    </Svg>
+  );
+}
+
 export const BUILDING_BY_ID: Record<Exclude<DistrictId, 'credit_card_payment'>, React.FC<BuildingSvgProps>> = {
   dining: DinerBuilding,
   property: PropertyBuilding,

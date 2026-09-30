@@ -12,6 +12,7 @@ import { CategoryIcon } from '@/components/CategoryIcon';
 import { MoneyStack } from '@/components/money/MoneyStack';
 import { colors, layout, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
+import { buildingLevel, upgradeProgress } from '@/engine/buildings';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import type { DistrictId } from '@/types';
@@ -28,6 +29,8 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
   const coverOverspend = useBudgetStore((s) => s.coverOverspend);
   const currentMonth = useBudgetStore((s) => s.currentMonth);
   const allocations = useBudgetStore((s) => s.allocations);
+  const getBuildingFunded = useBudgetStore((s) => s.getBuildingFunded);
+  const placedBuildings = useBudgetStore((s) => s.placedBuildings);
 
   const [coverOpen, setCoverOpen] = useState(false);
 
@@ -36,6 +39,12 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
     () => getAllocationState(districtId),
     [getAllocationState, districtId, transactions, allocations, currentMonth]
   );
+  const funded = useMemo(
+    () => getBuildingFunded(districtId),
+    [getBuildingFunded, districtId, placedBuildings]
+  );
+  const progress = upgradeProgress(funded);
+  const level = buildingLevel(funded);
 
   const donors = useMemo(() => {
     return getAllAllocationStates()
@@ -71,6 +80,7 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
         </View>
 
         <View style={styles.hero}>
+          <Text style={styles.levelBadge}>Level {level}</Text>
           <Text style={[styles.huge, { color: theme.ink }, alloc.isOverspent && styles.hugeOver]}>
             {formatEuro(alloc.available, { cents: false })}
           </Text>
@@ -78,6 +88,21 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
           <View style={styles.stack}>
             <MoneyStack amount={Math.max(0, alloc.available)} large />
           </View>
+          {progress.nextAt != null ? (
+            <View style={styles.upgradeBox}>
+              <Text style={styles.upgradeLabel}>
+                Upgrade → Lv {level + 1} · {formatEuro(progress.needed, { cents: false })} more funded
+              </Text>
+              <View style={styles.upgradeTrack}>
+                <View style={[styles.upgradeFill, { width: `${Math.round(progress.pct * 100)}%`, backgroundColor: theme.accent }]} />
+              </View>
+              <Text style={styles.upgradeMeta}>
+                Funded {formatEuro(funded, { cents: false })} / {formatEuro(progress.nextAt, { cents: false })}
+              </Text>
+            </View>
+          ) : (
+            <Text style={styles.upgradeMeta}>Max level · funded {formatEuro(funded, { cents: false })}</Text>
+          )}
         </View>
 
         {alloc.isOverspent ? (
@@ -113,7 +138,7 @@ export function DistrictDetailScreen({ route, navigation }: Props) {
 
         <View style={styles.bar}>
           <PrimaryButton
-            label="Move"
+            label="Fund / upgrade"
             variant="ember"
             onPress={() => navigation.navigate('Move', { toId: districtId })}
             style={[styles.barBtn, { backgroundColor: theme.accent }]}
@@ -158,14 +183,50 @@ const styles = StyleSheet.create({
   topSpacer: { width: layout.backSize, height: layout.backSize },
   topTitle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, flex: 1, justifyContent: 'center' },
   topName: { fontFamily: type.bodyBold, fontSize: type.size.sm + 1, color: colors.parchment },
-  hero: { alignItems: 'center', paddingTop: space.xl, paddingBottom: space.md, gap: space.xs },
+  hero: { alignItems: 'center', paddingTop: space.lg, paddingBottom: space.md, gap: space.xs },
+  levelBadge: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.xs,
+    color: colors.inkGoldBright,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+    backgroundColor: colors.glassInk,
+    overflow: 'hidden',
+    borderRadius: radius.pill,
+    paddingHorizontal: space.group,
+    paddingVertical: space.xs,
+  },
   huge: {
     fontFamily: type.display,
-    fontSize: 56,
+    fontSize: type.size.hero,
     color: colors.parchment,
     letterSpacing: -1,
   },
   hugeOver: { color: colors.coral500 },
+  upgradeBox: {
+    width: '86%',
+    marginTop: space.md,
+    gap: space.xs,
+  },
+  upgradeLabel: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.xs,
+    color: colors.parchment,
+    textAlign: 'center',
+  },
+  upgradeTrack: {
+    height: 8,
+    borderRadius: radius.pill,
+    backgroundColor: colors.glassInk,
+    overflow: 'hidden',
+  },
+  upgradeFill: { height: '100%', borderRadius: radius.pill },
+  upgradeMeta: {
+    fontFamily: type.body,
+    fontSize: type.size.xs,
+    color: colors.sage300,
+    textAlign: 'center',
+  },
   heroHint: {
     fontFamily: type.body,
     fontSize: type.size.sm,
