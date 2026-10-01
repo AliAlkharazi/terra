@@ -25,6 +25,7 @@ import {
 } from '@/engine/ynabEngine';
 import { lockedTotal, unlockAtFromDays } from '@/engine/locks';
 import { BUILD_COST_MIN } from '@/engine/buildings';
+import { BUILDING_CATALOG } from '@/village/buildingCatalog';
 import { buildSampleHistory } from '@/data/sampleHistory';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
@@ -109,11 +110,26 @@ function placementsFromAllocations(allocations: Allocation[]): PlacedBuilding[] 
 
 const DEFAULT_DISTRICTS: District[] = [
   { id: 'dining', label: 'Diner', icon: '', monthlyBudget: 250 },
-  { id: 'property', label: 'Home', icon: '', monthlyBudget: 200 },
-  { id: 'bills', label: 'Bills', icon: '', monthlyBudget: 80 },
-  { id: 'transport', label: 'Travel', icon: '', monthlyBudget: 120 },
-  { id: 'groceries', label: 'Food', icon: '', monthlyBudget: 350 },
+  { id: 'property', label: 'Apartment', icon: '', monthlyBudget: 200 },
+  { id: 'bills', label: 'Utility', icon: '', monthlyBudget: 80 },
+  { id: 'transport', label: 'Train Station', icon: '', monthlyBudget: 120 },
+  { id: 'groceries', label: 'Barn', icon: '', monthlyBudget: 350 },
+  { id: 'supermarket', label: 'Supermarket', icon: '', monthlyBudget: 200 },
+  { id: 'cinema', label: 'Cinema', icon: '', monthlyBudget: 80 },
+  { id: 'library', label: 'Library', icon: '', monthlyBudget: 40 },
+  { id: 'university', label: 'University', icon: '', monthlyBudget: 120 },
+  { id: 'hospital', label: 'Hospital', icon: '', monthlyBudget: 100 },
+  { id: 'school', label: 'School', icon: '', monthlyBudget: 90 },
+  { id: 'factory', label: 'Factory', icon: '', monthlyBudget: 150 },
+  { id: 'office', label: 'Office', icon: '', monthlyBudget: 100 },
+  { id: 'mall', label: 'Mall', icon: '', monthlyBudget: 180 },
+  { id: 'car_workshop', label: 'Car Workshop', icon: '', monthlyBudget: 90 },
 ];
+
+function shopCostFor(districtId: DistrictId): number {
+  const entry = BUILDING_CATALOG.find((b) => b.districtId === districtId);
+  return entry?.cost && entry.cost > 0 ? entry.cost : BUILD_COST_MIN;
+}
 
 function currentMonthISO(): string {
   const now = new Date();
@@ -295,11 +311,12 @@ export const useBudgetStore = create<BudgetState>()(
         if ((state.placedBuildings ?? []).some((b) => b.districtId === districtId)) {
           return { ok: false, error: 'Already built.' };
         }
+        const cost = shopCostFor(districtId);
         const vault = state.getReadyToAssign();
-        if (vault + 0.001 < BUILD_COST_MIN) {
-          return { ok: false, error: `Need at least €${BUILD_COST_MIN} in the vault.` };
+        if (vault + 0.001 < cost) {
+          return { ok: false, error: `Need at least €${cost} in the vault.` };
         }
-        state.moveMoney('vault', districtId, BUILD_COST_MIN, `Build ${district.label}`);
+        state.moveMoney('vault', districtId, cost, `Build ${district.label}`);
         set((s) => {
           if ((s.placedBuildings ?? []).some((b) => b.districtId === districtId)) return s;
           return {
@@ -308,7 +325,7 @@ export const useBudgetStore = create<BudgetState>()(
               {
                 districtId,
                 placedAt: new Date().toISOString(),
-                funded: BUILD_COST_MIN,
+                funded: cost,
               },
             ],
           };

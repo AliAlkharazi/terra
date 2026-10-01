@@ -112,7 +112,7 @@ describe('seedHistory', () => {
 });
 
 describe('placeBuilding', () => {
-  it('requires €10 in the vault and marks the plot as placed', () => {
+  it('requires vault cash and marks the plot as placed', () => {
     const store = useBudgetStore.getState();
     expect(store.placeBuilding('transport')).toEqual({
       ok: false,

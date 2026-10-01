@@ -1,29 +1,34 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Alert, ImageBackground, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useBudgetStore } from '@/store/budgetStore';
 import { useAuthStore } from '@/store/authStore';
 import { VillageMap } from '@/components/village/VillageMap';
+import { BuildShopModal } from '@/components/village/BuildShopModal';
 import { TapButton } from '@/components/TapButton';
-import { CategoryIcon } from '@/components/CategoryIcon';
 import { GoalAirplane } from '@/components/GoalAirplane';
-import { PrimaryButton } from '@/components/ui/PrimaryButton';
+import { ResourceBar } from '@/components/ui/ResourceBar';
 import { useCountUp } from '@/components/money/useCountUp';
-import { colors, gradients, healthColor, layout, radius, space, type } from '@/theme/tokens';
+import { colors, healthColor, layout, radius, space, type } from '@/theme/tokens';
 import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
 import { themeFor } from '@/theme/categoryTheme';
 import { BUILD_COST_MIN } from '@/engine/buildings';
 import { computeInsights } from '@/engine/insights';
 import { lockedTotal } from '@/engine/locks';
+import { BUILDING_CATALOG } from '@/village/buildingCatalog';
 import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
 import type { DistrictId } from '@/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'World'>;
+
+function shopCostFor(districtId: DistrictId): number {
+  const entry = BUILDING_CATALOG.find((b) => b.districtId === districtId);
+  return entry?.cost && entry.cost > 0 ? entry.cost : BUILD_COST_MIN;
+}
 
 export function WorldScreen({ navigation }: Props) {
   const districts = useBudgetStore((s) => s.districts);
@@ -62,8 +67,6 @@ export function WorldScreen({ navigation }: Props) {
   );
   const inTown = allocationStates.reduce((sum, a) => sum + Math.max(0, a.available), 0);
   const locked = lockedTotal(locks);
-  const moneyLeft = inTown + Math.max(0, vault) + locked;
-  const shownTotal = useCountUp(moneyLeft);
   const shownVault = useCountUp(Math.max(0, vault));
   const shownTown = useCountUp(inTown);
   const insights = useMemo(
@@ -78,6 +81,9 @@ export function WorldScreen({ navigation }: Props) {
     [districts, allocationStates, transactions, vault, currentMonth]
   );
 
+  const vaultCap = Math.max(1000, Math.round(Math.max(0, vault) * 1.2));
+  const townCap = Math.max(1000, Math.round(inTown * 1.2));
+
   const ping = (msg: string) => {
     setStatus(msg);
     setTimeout(() => setStatus(null), 2200);
@@ -89,6 +95,11 @@ export function WorldScreen({ navigation }: Props) {
     return map;
   }, [placedBuildings]);
 
+  const placedIds = useMemo(
+    () => new Set((placedBuildings ?? []).map((b) => b.districtId)),
+    [placedBuildings]
+  );
+
   const unplaced = useMemo(
     () => getUnplacedDistricts(),
     [getUnplacedDistricts, placedBuildings, districts]
@@ -97,13 +108,14 @@ export function WorldScreen({ navigation }: Props) {
   const confirmPlace = (districtId: DistrictId) => {
     const district = districts.find((d) => d.id === districtId);
     if (!district) return;
+    const cost = shopCostFor(districtId);
     Alert.alert(
       `Build ${district.label}?`,
-      `Spend €${BUILD_COST_MIN} from the vault to open this building on the map. Put more money in later to upgrade it.`,
+      `Spend ${formatEuro(cost, { cents: false })} from the vault to open this building on the map. Put more money in later to upgrade it.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: `Build (€${BUILD_COST_MIN})`,
+          text: `Build (${formatEuro(cost, { cents: false })})`,
           onPress: () => {
             const result = placeBuilding(districtId);
             if (result.ok) {
@@ -156,25 +168,34 @@ export function WorldScreen({ navigation }: Props) {
   };
 
   return (
-    <LinearGradient colors={[...gradients.world]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={styles.fill}>
-      <View pointerEvents="none" style={styles.sunGlow} />
+    <ImageBackground source={require('../../assets/grass-field.jpg')} style={styles.fill} resizeMode="cover">
+      <View pointerEvents="none" style={styles.grassTint} />
       <SafeAreaView style={styles.fill}>
         <View style={styles.header}>
           <TapButton onPress={() => navigation.navigate('Reports')} style={styles.headerTap} pressedScale={0.97}>
-            <Text style={styles.eyebrow}>{currentMonth}</Text>
-            <Text style={styles.total}>{formatEuro(shownTotal, { cents: false })}</Text>
-            <Text style={styles.totalLabel}>
-              Vault {formatEuro(shownVault, { cents: false })} · Town {formatEuro(shownTown, { cents: false })}
-              {locked > 0 ? ` · Frozen ${formatEuro(locked, { cents: false })}` : ''}
-            </Text>
+            <Text style={styles.eyebrow}>Terra · {currentMonth}</Text>
             <View style={[ui.chipOnMoss, styles.healthChip]}>
               <View style={[styles.healthDot, { backgroundColor: healthColor(insights.health) }]} />
               <Text style={ui.chipTextOnMoss}>
-                Insights {insights.health} · {insights.healthLabel}
+                {insights.healthLabel}
               </Text>
             </View>
           </TapButton>
           {status ? <Text style={styles.status}>{status}</Text> : null}
+        </View>
+
+        <View style={styles.resourceStack} pointerEvents="none">
+          <ResourceBar
+            value={shownVault}
+            max={vaultCap}
+            fillColor={themeFor('vault').accent}
+          />
+          <ResourceBar
+            value={shownTown}
+            max={townCap}
+            fillColor={colors.sage300}
+            style={styles.townBar}
+          />
         </View>
 
         <View style={styles.skyLane} pointerEvents="box-none">
@@ -241,29 +262,15 @@ export function WorldScreen({ navigation }: Props) {
         </TapButton>
       </SafeAreaView>
 
-      <Modal visible={buildOpen} transparent animationType="fade" onRequestClose={() => setBuildOpen(false)}>
-        <Pressable style={ui.backdrop} onPress={() => setBuildOpen(false)}>
-          <Pressable style={ui.sheet} onPress={() => undefined}>
-            <Text style={ui.sheetTitle}>Build a category</Text>
-            <Text style={styles.buildHint}>
-              Pick a plot to open. Costs €{BUILD_COST_MIN} from the vault — then fund it to upgrade.
-            </Text>
-            <Text style={styles.buildVault}>Vault {formatEuro(vault, { cents: false })}</Text>
-            {unplaced.map((d) => (
-              <TapButton key={d.id} style={styles.buildRow} onPress={() => confirmPlace(d.id)}>
-                <CategoryIcon name={d.id} size={22} color={themeFor(d.id).accent} />
-                <View style={styles.buildGrow}>
-                  <Text style={styles.buildName}>{d.label}</Text>
-                  <Text style={styles.buildMeta}>Open for €{BUILD_COST_MIN}</Text>
-                </View>
-                <Text style={styles.buildChevron}>→</Text>
-              </TapButton>
-            ))}
-            <PrimaryButton label="Close" variant="secondary" onPress={() => setBuildOpen(false)} style={styles.buildClose} />
-          </Pressable>
-        </Pressable>
-      </Modal>
-    </LinearGradient>
+      <BuildShopModal
+        visible={buildOpen}
+        onClose={() => setBuildOpen(false)}
+        vault={Math.max(0, vault)}
+        placedIds={placedIds}
+        districts={districts}
+        onBuild={confirmPlace}
+      />
+    </ImageBackground>
   );
 }
 
@@ -295,7 +302,6 @@ function GoalsLaunch({ onOpen, focused }: { onOpen: () => void; focused: boolean
     if (flying.current) return;
     flying.current = true;
     bob.value = withTiming(0, { duration: 80 });
-    // Stay level (0°) — slide up/out, no tilt
     x.value = withTiming(28, { duration: 420, easing: Easing.in(Easing.cubic) });
     y.value = withTiming(-36, { duration: 420, easing: Easing.out(Easing.cubic) });
     fade.value = withTiming(0, { duration: 360 }, (finished) => {
@@ -304,10 +310,7 @@ function GoalsLaunch({ onOpen, focused }: { onOpen: () => void; focused: boolean
   };
 
   const planeStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: x.value },
-      { translateY: y.value + bob.value },
-    ],
+    transform: [{ translateX: x.value }, { translateY: y.value + bob.value }],
     opacity: fade.value,
   }));
 
@@ -323,14 +326,9 @@ function GoalsLaunch({ onOpen, focused }: { onOpen: () => void; focused: boolean
 
 const styles = StyleSheet.create({
   fill: { flex: 1, overflow: 'visible' },
-  sunGlow: {
-    position: 'absolute',
-    top: -70,
-    alignSelf: 'center',
-    width: 280,
-    height: 280,
-    borderRadius: 140,
-    backgroundColor: colors.sunGlow,
+  grassTint: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(18, 36, 22, 0.12)',
   },
   header: {
     alignItems: 'center',
@@ -341,25 +339,12 @@ const styles = StyleSheet.create({
   headerTap: { alignItems: 'center', gap: space.xs },
   eyebrow: {
     fontFamily: type.bodyBold,
-    fontSize: type.size.xs,
-    color: colors.sage300,
-    letterSpacing: 1.2,
-  },
-  total: {
-    fontFamily: type.display,
-    fontSize: type.size.display - 4,
-    color: colors.inkGold,
-    textShadowColor: 'rgba(0,0,0,0.25)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
-  },
-  totalLabel: {
-    fontFamily: type.body,
     fontSize: type.size.sm,
     color: colors.parchment,
-    opacity: 0.88,
-    textAlign: 'center',
-    lineHeight: Math.round(type.size.sm * type.line.snug),
+    letterSpacing: 0.6,
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   healthChip: {
     alignSelf: 'center',
@@ -370,6 +355,16 @@ const styles = StyleSheet.create({
     fontFamily: type.body,
     fontSize: type.size.xs,
     color: colors.gold500,
+    marginTop: space.xs,
+  },
+  resourceStack: {
+    position: 'absolute',
+    right: space.md,
+    top: 118,
+    zIndex: 7,
+    gap: space.md,
+  },
+  townBar: {
     marginTop: space.xs,
   },
   mapWrap: { flex: 1, justifyContent: 'center', paddingVertical: space.sm },
@@ -474,33 +469,4 @@ const styles = StyleSheet.create({
     color: colors.inkGoldBright,
     letterSpacing: 0.3,
   },
-  buildHint: {
-    fontFamily: type.body,
-    fontSize: type.size.sm,
-    color: colors.textOnParchmentDim,
-    marginBottom: space.sm,
-    lineHeight: Math.round(type.size.sm * type.line.normal),
-  },
-  buildVault: {
-    fontFamily: type.bodyBold,
-    fontSize: type.size.sm,
-    color: colors.moss800,
-    marginBottom: space.md,
-  },
-  buildRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: space.group,
-    backgroundColor: colors.creamLift,
-    borderRadius: radius.card,
-    paddingHorizontal: space.md,
-    paddingVertical: space.group,
-    marginBottom: space.sm,
-    minHeight: layout.hitTarget,
-  },
-  buildGrow: { flex: 1 },
-  buildName: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
-  buildMeta: { fontFamily: type.body, fontSize: type.size.xs, color: colors.textOnParchmentDim, marginTop: 2 },
-  buildChevron: { fontFamily: type.bodyBold, fontSize: type.size.md, color: colors.ember500 },
-  buildClose: { marginTop: space.md },
 });
