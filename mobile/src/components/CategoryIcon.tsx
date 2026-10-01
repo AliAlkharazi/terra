@@ -46,6 +46,62 @@ export function CategoryIcon({ name, size = 22, color }: Props) {
           <Path d="M5 8 h14 l-1.2 10 H6.2 Z" stroke={stroke} strokeWidth={s} strokeLinejoin="round" />
           <Path d="M9 8 V6 a3 3 0 0 1 6 0 v2" stroke={stroke} strokeWidth={s} />
         </>
+      ) : name === 'supermarket' ? (
+        <>
+          <Rect x="4" y="6" width="16" height="14" rx="1" stroke={stroke} strokeWidth={s} />
+          <Path d="M4 10 h16 M8 6 V4 h8 v2" stroke={stroke} strokeWidth={s} strokeLinecap="round" />
+        </>
+      ) : name === 'cinema' ? (
+        <>
+          <Rect x="3" y="8" width="18" height="10" rx="2" stroke={stroke} strokeWidth={s} />
+          <Path d="M7 8 V6 h10 v2" stroke={stroke} strokeWidth={s} />
+          <Circle cx="8" cy="13" r="1.2" fill={stroke} />
+          <Circle cx="12" cy="13" r="1.2" fill={stroke} />
+          <Circle cx="16" cy="13" r="1.2" fill={stroke} />
+        </>
+      ) : name === 'library' ? (
+        <>
+          <Path d="M5 6 h5 v12 H5 Z M14 6 h5 v12 h-5 Z" stroke={stroke} strokeWidth={s} strokeLinejoin="round" />
+          <Path d="M10 6 v12" stroke={stroke} strokeWidth={s} />
+        </>
+      ) : name === 'university' ? (
+        <>
+          <Path d="M12 4 L20 8 v8 H4 V8 Z" stroke={stroke} strokeWidth={s} strokeLinejoin="round" />
+          <Path d="M9 16 v4 M15 16 v4" stroke={stroke} strokeWidth={s} strokeLinecap="round" />
+        </>
+      ) : name === 'hospital' ? (
+        <>
+          <Rect x="6" y="6" width="12" height="14" rx="1" stroke={stroke} strokeWidth={s} />
+          <Path d="M12 9 v6 M9 12 h6" stroke={stroke} strokeWidth={s} strokeLinecap="round" />
+        </>
+      ) : name === 'school' ? (
+        <>
+          <Path d="M4 10 L12 6 L20 10 L12 14 Z" stroke={stroke} strokeWidth={s} strokeLinejoin="round" />
+          <Path d="M8 14 v6 M16 14 v6" stroke={stroke} strokeWidth={s} strokeLinecap="round" />
+        </>
+      ) : name === 'factory' ? (
+        <>
+          <Rect x="5" y="10" width="10" height="10" stroke={stroke} strokeWidth={s} />
+          <Path d="M15 8 v12 M15 8 l3-3 v3" stroke={stroke} strokeWidth={s} strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      ) : name === 'office' ? (
+        <>
+          <Rect x="7" y="5" width="10" height="15" stroke={stroke} strokeWidth={s} />
+          <Path d="M10 9 h4 M10 12 h4 M10 15 h4" stroke={stroke} strokeWidth={s} strokeLinecap="round" />
+        </>
+      ) : name === 'mall' ? (
+        <>
+          <Path d="M6 8 h12 v10 H6 Z" stroke={stroke} strokeWidth={s} strokeLinejoin="round" />
+          <Path d="M9 8 V6 h6 v2" stroke={stroke} strokeWidth={s} />
+          <Circle cx="12" cy="13" r="2" stroke={stroke} strokeWidth={s} />
+        </>
+      ) : name === 'car_workshop' ? (
+        <>
+          <Path d="M5 14 h14 l-1-4 H6 Z" stroke={stroke} strokeWidth={s} strokeLinejoin="round" />
+          <Circle cx="8" cy="15" r="1.5" fill={stroke} />
+          <Circle cx="16" cy="15" r="1.5" fill={stroke} />
+          <Path d="M8 10 h8" stroke={stroke} strokeWidth={s} />
+        </>
       ) : name === 'credit_card_payment' ? (
         <>
           <Rect x="3" y="6" width="18" height="12" rx="2" stroke={stroke} strokeWidth={s} />

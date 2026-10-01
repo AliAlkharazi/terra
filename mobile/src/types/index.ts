@@ -4,6 +4,16 @@ export type DistrictId =
   | 'transport'
   | 'property'
   | 'bills'
+  | 'supermarket'
+  | 'cinema'
+  | 'library'
+  | 'university'
+  | 'hospital'
+  | 'school'
+  | 'factory'
+  | 'office'
+  | 'mall'
+  | 'car_workshop'
   | 'credit_card_payment';
 
 export type TargetType = 'MONTHLY_NEEDED' | 'SAVINGS_BALANCE' | 'TARGET_BY_DATE';
@@ -83,4 +93,12 @@ export interface AllocationState {
   target?: DistrictTarget;
   targetProgressPct: number | null; // null if no target set
   requiredMonthlyFunding: number | null; // null if no target set
+}
+
+/** Clash-style placement record — building appears on the village map once placed. */
+export interface PlacedBuilding {
+  districtId: DistrictId;
+  placedAt: string; // ISO
+  /** Lifetime euros funded into this building (drives upgrade level). */
+  funded: number;
 }

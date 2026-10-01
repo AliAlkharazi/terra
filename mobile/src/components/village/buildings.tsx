@@ -1,12 +1,50 @@
 import React from 'react';
 import Svg, { Circle, Ellipse, G, Path, Text as SvgText } from 'react-native-svg';
-import type { DistrictId } from '@/types';
+import type { DistrictId, PocketId } from '@/types';
 import { themeFor } from '@/theme/categoryTheme';
 
 export interface BuildingSvgProps {
   size?: number;
   overspent?: boolean;
   fill?: number;
+}
+
+type PlaceableId = Exclude<DistrictId, 'credit_card_payment'>;
+
+export function GenericBuilding({
+  size = 112,
+  overspent,
+  themeId,
+}: BuildingSvgProps & { themeId: PocketId }) {
+  const ox = 50;
+  const oy = 90;
+  const t = themeFor(themeId);
+  const top = overspent ? '#B8A898' : t.top;
+  const left = overspent ? '#8A8074' : t.left;
+  const right = overspent ? '#C9BBA8' : t.right;
+  const roofL = overspent ? '#8E422C' : t.roofL;
+  const roofR = overspent ? '#B85A3A' : t.roofR;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 110 112">
+      <ContactShadow cx={52} cy={100} />
+      <IsoBox ox={ox} oy={oy} w={24} depth={18} h={17} top={top} left={left} right={right} />
+      <GableRoof ox={ox} oy={oy} w={24} depth={18} h={17} rise={9} left={roofL} right={roofR} />
+      <FaceWindow ox={ox} oy={oy} x={4} z={6} lit={!overspent} />
+      <FaceWindow ox={ox} oy={oy} x={10.5} z={6} lit />
+      <FaceWindow ox={ox} oy={oy} x={17} z={6} lit={!overspent} />
+      <Path
+        d={poly([iso(10, 0.12, 0, ox, oy), iso(14, 0.12, 0, ox, oy), iso(14, 0.12, 9, ox, oy), iso(10, 0.12, 9, ox, oy)])}
+        fill={t.accent}
+        opacity={0.85}
+      />
+    </Svg>
+  );
+}
+
+function themedBuilding(themeId: PlaceableId): React.FC<BuildingSvgProps> {
+  return function ThemedBuilding(props) {
+    return <GenericBuilding {...props} themeId={themeId} />;
+  };
 }
 
 export function iso(x: number, y: number, z: number, ox = 0, oy = 0) {
@@ -388,10 +426,52 @@ export function SceneSparkles() {
   );
 }
 
-export const BUILDING_BY_ID: Record<Exclude<DistrictId, 'credit_card_payment'>, React.FC<BuildingSvgProps>> = {
+/** Empty plot scaffold — Clash-style “build here” marker. */
+export function EmptyPlotBuilding({ size = 120 }: BuildingSvgProps) {
+  const ox = 48;
+  const oy = 92;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 96 110">
+      <Ellipse cx={48} cy={98} rx={28} ry={8} fill="#0E1A12" opacity={0.22} />
+      {/* dashed pad ring feel */}
+      <Ellipse cx={48} cy={88} rx={30} ry={12} fill="none" stroke="#F4E6A8" strokeWidth={1.6} strokeDasharray="4 3" opacity={0.7} />
+      <IsoBox ox={ox - 10} oy={oy} w={8} depth={8} h={14} top="#C9A24A" left="#8A7028" right="#E8C45A" />
+      <IsoBox ox={ox + 6} oy={oy + 2} w={7} depth={7} h={10} top="#D4B25A" left="#8A7028" right="#F0D078" />
+      {/* + flag */}
+      <Path
+        d={`M${iso(4, 4, 16, ox - 10, oy).x} ${iso(4, 4, 16, ox - 10, oy).y} L${iso(4, 4, 28, ox - 10, oy).x} ${iso(4, 4, 28, ox - 10, oy).y}`}
+        stroke="#F4E6A8"
+        strokeWidth={2}
+      />
+      <Circle cx={iso(4, 4, 30, ox - 10, oy).x} cy={iso(4, 4, 30, ox - 10, oy).y} r={5} fill="#E8A24B" />
+      <SvgText
+        x={iso(4, 4, 30, ox - 10, oy).x}
+        y={iso(4, 4, 30, ox - 10, oy).y + 3.5}
+        fill="#1B2E24"
+        fontSize="8"
+        fontWeight="700"
+        textAnchor="middle"
+      >
+        +
+      </SvgText>
+    </Svg>
+  );
+}
+
+export const BUILDING_BY_ID: Record<PlaceableId, React.FC<BuildingSvgProps>> = {
   dining: DinerBuilding,
   property: PropertyBuilding,
   bills: ClockTowerBuilding,
   transport: TrainStationBuilding,
   groceries: BarnBuilding,
+  supermarket: themedBuilding('supermarket'),
+  cinema: themedBuilding('cinema'),
+  library: themedBuilding('library'),
+  university: themedBuilding('university'),
+  hospital: themedBuilding('hospital'),
+  school: themedBuilding('school'),
+  factory: themedBuilding('factory'),
+  office: themedBuilding('office'),
+  mall: themedBuilding('mall'),
+  car_workshop: themedBuilding('car_workshop'),
 };

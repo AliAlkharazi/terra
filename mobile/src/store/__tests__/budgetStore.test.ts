@@ -111,6 +111,41 @@ describe('seedHistory', () => {
   });
 });
 
+describe('placeBuilding', () => {
+  it('requires vault cash and marks the plot as placed', () => {
+    const store = useBudgetStore.getState();
+    expect(store.placeBuilding('transport')).toEqual({
+      ok: false,
+      error: 'Need at least €10 in the vault.',
+    });
+
+    store.logIncome(25, 'seed');
+    const result = store.placeBuilding('transport');
+    expect(result).toEqual({ ok: true });
+
+    const next = useBudgetStore.getState();
+    expect(next.isBuildingPlaced('transport')).toBe(true);
+    expect(next.getBuildingFunded('transport')).toBe(10);
+    expect(next.getReadyToAssign()).toBe(15);
+    expect(next.getAllocationState('transport').allocated).toBe(10);
+  });
+
+  it('rejects a second build on the same plot', () => {
+    const store = useBudgetStore.getState();
+    store.logIncome(40, 'seed');
+    expect(store.placeBuilding('bills')).toEqual({ ok: true });
+    expect(store.placeBuilding('bills')).toEqual({ ok: false, error: 'Already built.' });
+  });
+
+  it('levels up funded total when you move more money in', () => {
+    const store = useBudgetStore.getState();
+    store.logIncome(100, 'seed');
+    store.placeBuilding('dining');
+    store.moveMoney('vault', 'dining', 40, 'upgrade');
+    expect(useBudgetStore.getState().getBuildingFunded('dining')).toBe(50);
+  });
+});
+
 describe('lockMoney', () => {
   it('hides locked cash from the vault until the lock expires', () => {
     const store = useBudgetStore.getState();
