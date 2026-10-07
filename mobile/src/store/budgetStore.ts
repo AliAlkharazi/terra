@@ -1,7 +1,19 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Allocation, AllocationState, BankState, District, DistrictId, DistrictTarget, Transaction, ActivityItem, PocketId, MoneyLock } from '@/types';
+import {
+  Allocation,
+  AllocationState,
+  BankState,
+  District,
+  DistrictId,
+  DistrictTarget,
+  Transaction,
+  ActivityItem,
+  PocketId,
+  MoneyLock,
+  PlacedBuilding,
+} from '@/types';
 import type { ImportedBankTx } from '@/api/client';
 import {
   computeAllocationStateChain,
@@ -12,6 +24,7 @@ import {
   shiftMonth,
 } from '@/engine/ynabEngine';
 import { lockedTotal, unlockAtFromDays } from '@/engine/locks';
+import { BUILD_COST_MIN } from '@/engine/buildings';
 import { buildSampleHistory } from '@/data/sampleHistory';
 import { api } from '@/api/client';
 import { useAuthStore } from '@/store/authStore';
@@ -24,6 +37,8 @@ export interface LastEvent {
   nonce: number;
 }
 
+export type PlaceBuildingResult = { ok: true } | { ok: false; error: string };
+
 interface BudgetState {
   districts: District[];
   transactions: Transaction[];
@@ -34,6 +49,8 @@ interface BudgetState {
   activity: ActivityItem[];
   locks: MoneyLock[];
   historySeeded: boolean;
+  /** Clash-style: only placed buildings render on the map. */
+  placedBuildings: PlacedBuilding[];
 
   seedHistory: () => void;
   addTransaction: (tx: Omit<Transaction, 'id' | 'kind'> & { isCreditCard?: boolean }) => void;
@@ -48,6 +65,12 @@ interface BudgetState {
   lockMoney: (amount: number, days: number) => void;
   setMonth: (monthISO: string) => void;
 
+  /** Place a category building on the map for BUILD_COST_MIN from the vault. */
+  placeBuilding: (districtId: DistrictId) => PlaceBuildingResult;
+  isBuildingPlaced: (districtId: DistrictId) => boolean;
+  getBuildingFunded: (districtId: DistrictId) => number;
+  getUnplacedDistricts: () => District[];
+
   backupNow: () => Promise<{ success: boolean; error?: string }>;
   restoreFromBackup: () => Promise<{ success: boolean; error?: string }>;
 
@@ -60,6 +83,28 @@ interface BudgetState {
   getBankSnapshot: () => BankState;
   getAllocationState: (districtId: DistrictId, month?: string) => AllocationState;
   getAllAllocationStates: (month?: string) => AllocationState[];
+}
+
+function bumpBuildingFunded(placed: PlacedBuilding[], districtId: DistrictId, delta: number): PlacedBuilding[] {
+  if (delta <= 0) return placed;
+  return placed.map((b) =>
+    b.districtId === districtId ? { ...b, funded: Math.round((b.funded + delta) * 100) / 100 } : b
+  );
+}
+
+/** Infer placements from existing allocations (migration / sample history). */
+function placementsFromAllocations(allocations: Allocation[]): PlacedBuilding[] {
+  const fundedBy = new Map<DistrictId, number>();
+  for (const a of allocations) {
+    if (a.amount <= 0) continue;
+    fundedBy.set(a.districtId, (fundedBy.get(a.districtId) ?? 0) + a.amount);
+  }
+  const now = new Date().toISOString();
+  return [...fundedBy.entries()].map(([districtId, funded]) => ({
+    districtId,
+    placedAt: now,
+    funded: Math.max(BUILD_COST_MIN, funded),
+  }));
 }
 
 const DEFAULT_DISTRICTS: District[] = [
@@ -95,6 +140,7 @@ export const useBudgetStore = create<BudgetState>()(
       activity: [],
       locks: [],
       historySeeded: false,
+      placedBuildings: [],
 
       seedHistory: () => {
         const state = get();
@@ -105,11 +151,23 @@ export const useBudgetStore = create<BudgetState>()(
           set({ historySeeded: true });
           return;
         }
+        const nextAllocations = [...history.allocations, ...state.allocations];
+        // Leave a couple of plots empty so “Build” is discoverable in demos.
+        const demoHeldBack = new Set<DistrictId>(['transport', 'bills']);
+        const inferred = placementsFromAllocations(nextAllocations).filter(
+          (b) => !demoHeldBack.has(b.districtId)
+        );
+        const existingIds = new Set((state.placedBuildings ?? []).map((b) => b.districtId));
+        const mergedPlaced = [
+          ...(state.placedBuildings ?? []),
+          ...inferred.filter((b) => !existingIds.has(b.districtId)),
+        ];
         set({
           transactions: [...history.transactions, ...state.transactions],
-          allocations: [...history.allocations, ...state.allocations],
+          allocations: nextAllocations,
           activity: [...(state.activity ?? []), ...history.activity].sort((a, b) => b.date.localeCompare(a.date)),
           historySeeded: true,
+          placedBuildings: mergedPlaced,
         });
       },
 
@@ -205,20 +263,68 @@ export const useBudgetStore = create<BudgetState>()(
           addToDistrict(from, currentMonth, -amount);
           addToDistrict(to, currentMonth, amount);
         }
-        set((state) => ({
-          activity: [
-            {
-              id: `${Date.now()}-mv`,
-              date: new Date().toISOString(),
-              kind: 'move',
-              amount,
-              fromId: from,
-              toId: to,
-              note: note.trim(),
-            },
-            ...(state.activity ?? []),
-          ],
-        }));
+        set((state) => {
+          let placedBuildings = state.placedBuildings ?? [];
+          if (from === 'vault' && to !== 'vault') {
+            placedBuildings = bumpBuildingFunded(placedBuildings, to, amount);
+          } else if (from !== 'vault' && to !== 'vault') {
+            placedBuildings = bumpBuildingFunded(placedBuildings, to, amount);
+          }
+          return {
+            placedBuildings,
+            activity: [
+              {
+                id: `${Date.now()}-mv`,
+                date: new Date().toISOString(),
+                kind: 'move',
+                amount,
+                fromId: from,
+                toId: to,
+                note: note.trim(),
+              },
+              ...(state.activity ?? []),
+            ],
+          };
+        });
+      },
+
+      placeBuilding: (districtId) => {
+        const state = get();
+        const district = state.districts.find((d) => d.id === districtId && !d.isCreditCard);
+        if (!district) return { ok: false, error: 'Unknown category.' };
+        if ((state.placedBuildings ?? []).some((b) => b.districtId === districtId)) {
+          return { ok: false, error: 'Already built.' };
+        }
+        const vault = state.getReadyToAssign();
+        if (vault + 0.001 < BUILD_COST_MIN) {
+          return { ok: false, error: `Need at least €${BUILD_COST_MIN} in the vault.` };
+        }
+        state.moveMoney('vault', districtId, BUILD_COST_MIN, `Build ${district.label}`);
+        set((s) => {
+          if ((s.placedBuildings ?? []).some((b) => b.districtId === districtId)) return s;
+          return {
+            placedBuildings: [
+              ...(s.placedBuildings ?? []),
+              {
+                districtId,
+                placedAt: new Date().toISOString(),
+                funded: BUILD_COST_MIN,
+              },
+            ],
+          };
+        });
+        return { ok: true };
+      },
+
+      isBuildingPlaced: (districtId) =>
+        (get().placedBuildings ?? []).some((b) => b.districtId === districtId),
+
+      getBuildingFunded: (districtId) =>
+        (get().placedBuildings ?? []).find((b) => b.districtId === districtId)?.funded ?? 0,
+
+      getUnplacedDistricts: () => {
+        const placed = new Set((get().placedBuildings ?? []).map((b) => b.districtId));
+        return get().districts.filter((d) => !d.isCreditCard && !placed.has(d.id));
       },
 
       coverOverspend: (fromDistrictId, toDistrictId, month, amount) => {
@@ -415,7 +521,7 @@ export const useBudgetStore = create<BudgetState>()(
       },
     }),
     {
-      name: 'terra-budget-storage-v5',
+      name: 'terra-budget-storage-v6',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({
         districts: state.districts,
@@ -426,7 +532,21 @@ export const useBudgetStore = create<BudgetState>()(
         activity: state.activity,
         locks: state.locks,
         historySeeded: state.historySeeded,
+        placedBuildings: state.placedBuildings,
       }),
+      merge: (persisted, current) => {
+        const p = (persisted ?? {}) as Partial<BudgetState>;
+        const placed =
+          p.placedBuildings ??
+          (p.allocations?.length ? placementsFromAllocations(p.allocations) : current.placedBuildings);
+        return {
+          ...current,
+          ...p,
+          placedBuildings: placed ?? [],
+          locks: p.locks ?? [],
+          activity: p.activity ?? [],
+        };
+      },
     }
   )
 );

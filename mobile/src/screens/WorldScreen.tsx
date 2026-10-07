@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
@@ -7,16 +7,21 @@ import { useBudgetStore } from '@/store/budgetStore';
 import { useAuthStore } from '@/store/authStore';
 import { VillageMap } from '@/components/village/VillageMap';
 import { TapButton } from '@/components/TapButton';
+import { CategoryIcon } from '@/components/CategoryIcon';
 import { GoalAirplane } from '@/components/GoalAirplane';
+import { PrimaryButton } from '@/components/ui/PrimaryButton';
 import { useCountUp } from '@/components/money/useCountUp';
 import { colors, gradients, healthColor, layout, radius, space, type } from '@/theme/tokens';
 import { ui } from '@/theme/ui';
 import { formatEuro } from '@/theme/money';
+import { themeFor } from '@/theme/categoryTheme';
+import { BUILD_COST_MIN } from '@/engine/buildings';
 import { computeInsights } from '@/engine/insights';
 import { lockedTotal } from '@/engine/locks';
 import { useIsFocused } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/types';
+import type { DistrictId } from '@/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'World'>;
 
@@ -29,12 +34,16 @@ export function WorldScreen({ navigation }: Props) {
   const getReadyToAssign = useBudgetStore((s) => s.getReadyToAssign);
   const backupNow = useBudgetStore((s) => s.backupNow);
   const restoreFromBackup = useBudgetStore((s) => s.restoreFromBackup);
+  const placedBuildings = useBudgetStore((s) => s.placedBuildings);
+  const placeBuilding = useBudgetStore((s) => s.placeBuilding);
+  const getUnplacedDistricts = useBudgetStore((s) => s.getUnplacedDistricts);
 
   const mode = useAuthStore((s) => s.mode);
   const logout = useAuthStore((s) => s.logout);
 
   const focused = useIsFocused();
   const [status, setStatus] = useState<string | null>(null);
+  const [buildOpen, setBuildOpen] = useState(false);
 
   useEffect(() => {
     const seed = () => useBudgetStore.getState().seedHistory();
@@ -72,6 +81,41 @@ export function WorldScreen({ navigation }: Props) {
   const ping = (msg: string) => {
     setStatus(msg);
     setTimeout(() => setStatus(null), 2200);
+  };
+
+  const placedFunded = useMemo(() => {
+    const map: Partial<Record<DistrictId, number>> = {};
+    for (const b of placedBuildings ?? []) map[b.districtId] = b.funded;
+    return map;
+  }, [placedBuildings]);
+
+  const unplaced = useMemo(
+    () => getUnplacedDistricts(),
+    [getUnplacedDistricts, placedBuildings, districts]
+  );
+
+  const confirmPlace = (districtId: DistrictId) => {
+    const district = districts.find((d) => d.id === districtId);
+    if (!district) return;
+    Alert.alert(
+      `Build ${district.label}?`,
+      `Spend €${BUILD_COST_MIN} from the vault to open this building on the map. Put more money in later to upgrade it.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: `Build (€${BUILD_COST_MIN})`,
+          onPress: () => {
+            const result = placeBuilding(districtId);
+            if (result.ok) {
+              setBuildOpen(false);
+              ping(`${district.label} built`);
+            } else {
+              Alert.alert('Can’t build', result.error);
+            }
+          },
+        },
+      ]
+    );
   };
 
   const openAccount = () => {
@@ -143,7 +187,9 @@ export function WorldScreen({ navigation }: Props) {
             allocationStates={allocationStates}
             vaultAmount={shownVault}
             lockedAmount={locked}
+            placedFunded={placedFunded}
             onDistrictPress={(districtId) => navigation.navigate('DistrictDetail', { districtId })}
+            onEmptyPlotPress={confirmPlace}
             onVaultPress={() => navigation.navigate('Move')}
           />
         </View>
@@ -156,12 +202,26 @@ export function WorldScreen({ navigation }: Props) {
             <TapButton style={[styles.dockBtn, styles.dockBtnMain]} onPress={() => navigation.navigate('Move')} hoverScale={1.03}>
               <Text style={[styles.dockBtnText, styles.dockBtnMainText]}>Move</Text>
             </TapButton>
-            <TapButton style={styles.dockBtn} onPress={() => navigation.navigate('More')} hoverScale={1.03}>
-              <Text style={styles.dockBtnText}>Activity</Text>
+            <TapButton
+              style={styles.dockBtn}
+              onPress={() => {
+                if (unplaced.length === 0) {
+                  ping('All buildings placed');
+                  return;
+                }
+                setBuildOpen(true);
+              }}
+              hoverScale={1.03}
+            >
+              <Text style={styles.dockBtnText}>Build</Text>
             </TapButton>
           </View>
           <View style={styles.dockDivider} />
           <View style={styles.dockSecondary}>
+            <TapButton onPress={() => navigation.navigate('More')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
+              <Text style={styles.dockLink}>Activity</Text>
+            </TapButton>
+            <Text style={styles.dockDot}>·</Text>
             <TapButton onPress={() => navigation.navigate('Lock')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
               <Text style={styles.dockLink}>Freeze</Text>
             </TapButton>
@@ -180,6 +240,29 @@ export function WorldScreen({ navigation }: Props) {
           <Text style={[ui.chipTextOnMoss, styles.accountText]}>{mode === 'synced' ? 'Account' : 'Offline'}</Text>
         </TapButton>
       </SafeAreaView>
+
+      <Modal visible={buildOpen} transparent animationType="fade" onRequestClose={() => setBuildOpen(false)}>
+        <Pressable style={ui.backdrop} onPress={() => setBuildOpen(false)}>
+          <Pressable style={ui.sheet} onPress={() => undefined}>
+            <Text style={ui.sheetTitle}>Build a category</Text>
+            <Text style={styles.buildHint}>
+              Pick a plot to open. Costs €{BUILD_COST_MIN} from the vault — then fund it to upgrade.
+            </Text>
+            <Text style={styles.buildVault}>Vault {formatEuro(vault, { cents: false })}</Text>
+            {unplaced.map((d) => (
+              <TapButton key={d.id} style={styles.buildRow} onPress={() => confirmPlace(d.id)}>
+                <CategoryIcon name={d.id} size={22} color={themeFor(d.id).accent} />
+                <View style={styles.buildGrow}>
+                  <Text style={styles.buildName}>{d.label}</Text>
+                  <Text style={styles.buildMeta}>Open for €{BUILD_COST_MIN}</Text>
+                </View>
+                <Text style={styles.buildChevron}>→</Text>
+              </TapButton>
+            ))}
+            <PrimaryButton label="Close" variant="secondary" onPress={() => setBuildOpen(false)} style={styles.buildClose} />
+          </Pressable>
+        </Pressable>
+      </Modal>
     </LinearGradient>
   );
 }
@@ -391,4 +474,33 @@ const styles = StyleSheet.create({
     color: colors.inkGoldBright,
     letterSpacing: 0.3,
   },
+  buildHint: {
+    fontFamily: type.body,
+    fontSize: type.size.sm,
+    color: colors.textOnParchmentDim,
+    marginBottom: space.sm,
+    lineHeight: Math.round(type.size.sm * type.line.normal),
+  },
+  buildVault: {
+    fontFamily: type.bodyBold,
+    fontSize: type.size.sm,
+    color: colors.moss800,
+    marginBottom: space.md,
+  },
+  buildRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.group,
+    backgroundColor: colors.creamLift,
+    borderRadius: radius.card,
+    paddingHorizontal: space.md,
+    paddingVertical: space.group,
+    marginBottom: space.sm,
+    minHeight: layout.hitTarget,
+  },
+  buildGrow: { flex: 1 },
+  buildName: { fontFamily: type.bodyBold, fontSize: type.size.base, color: colors.moss900 },
+  buildMeta: { fontFamily: type.body, fontSize: type.size.xs, color: colors.textOnParchmentDim, marginTop: 2 },
+  buildChevron: { fontFamily: type.bodyBold, fontSize: type.size.md, color: colors.ember500 },
+  buildClose: { marginTop: space.md },
 });

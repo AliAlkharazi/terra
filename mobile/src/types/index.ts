@@ -84,3 +84,11 @@ export interface AllocationState {
   targetProgressPct: number | null; // null if no target set
   requiredMonthlyFunding: number | null; // null if no target set
 }
+
+/** Clash-style placement record — building appears on the village map once placed. */
+export interface PlacedBuilding {
+  districtId: DistrictId;
+  placedAt: string; // ISO
+  /** Lifetime euros funded into this building (drives upgrade level). */
+  funded: number;
+}
