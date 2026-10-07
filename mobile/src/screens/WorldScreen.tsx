@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, ImageBackground, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { Easing, runOnJS, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 import { useBudgetStore } from '@/store/budgetStore';
 import { useAuthStore } from '@/store/authStore';
 import { VillageMap } from '@/components/village/VillageMap';
-import { TownCamera } from '@/components/village/TownCamera';
 import { BuildShopModal } from '@/components/village/BuildShopModal';
 import { TapButton } from '@/components/TapButton';
 import { GoalAirplane } from '@/components/GoalAirplane';
@@ -169,84 +168,92 @@ export function WorldScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.fill}>
-      {/* Free-roam town — drag to pan, pinch to zoom */}
-      <TownCamera topChrome={100} bottomChrome={150}>
-        <VillageMap
-          districts={districts}
-          allocationStates={allocationStates}
-          vaultAmount={shownVault}
-          lockedAmount={locked}
-          placedFunded={placedFunded}
-          onDistrictPress={(districtId) => navigation.navigate('DistrictDetail', { districtId })}
-          onEmptyPlotPress={confirmPlace}
-          onVaultPress={() => navigation.navigate('Move')}
-        />
-      </TownCamera>
-
-      <SafeAreaView style={styles.chrome} pointerEvents="box-none">
-        <View style={styles.header} pointerEvents="box-none">
+    <ImageBackground source={require('../../assets/grass-field.jpg')} style={styles.fill} resizeMode="cover">
+      <View pointerEvents="none" style={styles.grassTint} />
+      <SafeAreaView style={styles.fill}>
+        <View style={styles.header}>
           <TapButton onPress={() => navigation.navigate('Reports')} style={styles.headerTap} pressedScale={0.97}>
             <Text style={styles.eyebrow}>Terra · {currentMonth}</Text>
             <View style={[ui.chipOnMoss, styles.healthChip]}>
               <View style={[styles.healthDot, { backgroundColor: healthColor(insights.health) }]} />
-              <Text style={ui.chipTextOnMoss}>{insights.healthLabel}</Text>
+              <Text style={ui.chipTextOnMoss}>
+                {insights.healthLabel}
+              </Text>
             </View>
           </TapButton>
           {status ? <Text style={styles.status}>{status}</Text> : null}
-          <Text style={styles.hint}>Drag to explore · pinch to zoom</Text>
         </View>
 
         <View style={styles.resourceStack} pointerEvents="none">
-          <ResourceBar value={shownVault} max={vaultCap} fillColor={themeFor('vault').accent} />
-          <ResourceBar value={shownTown} max={townCap} fillColor={colors.sage300} style={styles.townBar} />
+          <ResourceBar
+            value={shownVault}
+            max={vaultCap}
+            fillColor={themeFor('vault').accent}
+          />
+          <ResourceBar
+            value={shownTown}
+            max={townCap}
+            fillColor={colors.sage300}
+            style={styles.townBar}
+          />
         </View>
 
         <View style={styles.skyLane} pointerEvents="box-none">
           <GoalsLaunch onOpen={() => navigation.navigate('Goals')} focused={focused} />
         </View>
 
-        <View style={styles.dockWrap} pointerEvents="box-none">
-          <View style={ui.dock}>
-            <View style={styles.dockPrimary}>
-              <TapButton style={styles.dockBtn} onPress={() => navigation.navigate('Deposit')} hoverScale={1.03}>
-                <Text style={styles.dockBtnText}>Deposit</Text>
-              </TapButton>
-              <TapButton style={[styles.dockBtn, styles.dockBtnMain]} onPress={() => navigation.navigate('Move')} hoverScale={1.03}>
-                <Text style={[styles.dockBtnText, styles.dockBtnMainText]}>Move</Text>
-              </TapButton>
-              <TapButton
-                style={styles.dockBtn}
-                onPress={() => {
-                  if (unplaced.length === 0) {
-                    ping('All buildings placed');
-                    return;
-                  }
-                  setBuildOpen(true);
-                }}
-                hoverScale={1.03}
-              >
-                <Text style={styles.dockBtnText}>Build</Text>
-              </TapButton>
-            </View>
-            <View style={styles.dockDivider} />
-            <View style={styles.dockSecondary}>
-              <TapButton onPress={() => navigation.navigate('More')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
-                <Text style={styles.dockLink}>Activity</Text>
-              </TapButton>
-              <Text style={styles.dockDot}>·</Text>
-              <TapButton onPress={() => navigation.navigate('Lock')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
-                <Text style={styles.dockLink}>Freeze</Text>
-              </TapButton>
-              <Text style={styles.dockDot}>·</Text>
-              <TapButton onPress={() => navigation.navigate('Preview')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
-                <Text style={styles.dockLink}>Preview</Text>
-              </TapButton>
-              <Text style={styles.dockDot}>·</Text>
-              <TapButton onPress={() => navigation.navigate('Afford')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
-                <Text style={styles.dockLink}>Ask</Text>
-              </TapButton>
-            </View>
+        <View style={styles.mapWrap}>
+          <VillageMap
+            districts={districts}
+            allocationStates={allocationStates}
+            vaultAmount={shownVault}
+            lockedAmount={locked}
+            placedFunded={placedFunded}
+            onDistrictPress={(districtId) => navigation.navigate('DistrictDetail', { districtId })}
+            onEmptyPlotPress={confirmPlace}
+            onVaultPress={() => navigation.navigate('Move')}
+          />
+        </View>
+
+        <View style={ui.dock}>
+          <View style={styles.dockPrimary}>
+            <TapButton style={styles.dockBtn} onPress={() => navigation.navigate('Deposit')} hoverScale={1.03}>
+              <Text style={styles.dockBtnText}>Deposit</Text>
+            </TapButton>
+            <TapButton style={[styles.dockBtn, styles.dockBtnMain]} onPress={() => navigation.navigate('Move')} hoverScale={1.03}>
+              <Text style={[styles.dockBtnText, styles.dockBtnMainText]}>Move</Text>
+            </TapButton>
+            <TapButton
+              style={styles.dockBtn}
+              onPress={() => {
+                if (unplaced.length === 0) {
+                  ping('All buildings placed');
+                  return;
+                }
+                setBuildOpen(true);
+              }}
+              hoverScale={1.03}
+            >
+              <Text style={styles.dockBtnText}>Build</Text>
+            </TapButton>
+          </View>
+          <View style={styles.dockDivider} />
+          <View style={styles.dockSecondary}>
+            <TapButton onPress={() => navigation.navigate('More')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
+              <Text style={styles.dockLink}>Activity</Text>
+            </TapButton>
+            <Text style={styles.dockDot}>·</Text>
+            <TapButton onPress={() => navigation.navigate('Lock')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
+              <Text style={styles.dockLink}>Freeze</Text>
+            </TapButton>
+            <Text style={styles.dockDot}>·</Text>
+            <TapButton onPress={() => navigation.navigate('Preview')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
+              <Text style={styles.dockLink}>Preview</Text>
+            </TapButton>
+            <Text style={styles.dockDot}>·</Text>
+            <TapButton onPress={() => navigation.navigate('Afford')} pressedScale={0.96} hoverScale={1.04} style={styles.dockLinkHit}>
+              <Text style={styles.dockLink}>Ask</Text>
+            </TapButton>
           </View>
         </View>
 
@@ -263,7 +270,7 @@ export function WorldScreen({ navigation }: Props) {
         districts={districts}
         onBuild={confirmPlace}
       />
-    </View>
+    </ImageBackground>
   );
 }
 
@@ -318,10 +325,10 @@ function GoalsLaunch({ onOpen, focused }: { onOpen: () => void; focused: boolean
 }
 
 const styles = StyleSheet.create({
-  fill: { flex: 1, backgroundColor: '#2A4A22' },
-  chrome: {
+  fill: { flex: 1, overflow: 'visible' },
+  grassTint: {
     ...StyleSheet.absoluteFillObject,
-    zIndex: 5,
+    backgroundColor: 'rgba(18, 36, 22, 0.12)',
   },
   header: {
     alignItems: 'center',
@@ -335,7 +342,7 @@ const styles = StyleSheet.create({
     fontSize: type.size.sm,
     color: colors.parchment,
     letterSpacing: 0.6,
-    textShadowColor: 'rgba(0,0,0,0.55)',
+    textShadowColor: 'rgba(0,0,0,0.45)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
   },
@@ -350,16 +357,6 @@ const styles = StyleSheet.create({
     color: colors.gold500,
     marginTop: space.xs,
   },
-  hint: {
-    fontFamily: type.body,
-    fontSize: type.size.micro,
-    color: colors.parchment,
-    opacity: 0.75,
-    marginTop: space.xs,
-    textShadowColor: 'rgba(0,0,0,0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
-  },
   resourceStack: {
     position: 'absolute',
     right: space.md,
@@ -370,15 +367,17 @@ const styles = StyleSheet.create({
   townBar: {
     marginTop: space.xs,
   },
+  mapWrap: { flex: 1, justifyContent: 'center', paddingVertical: space.sm },
   skyLane: {
-    position: 'absolute',
-    right: space.md,
-    top: 72,
     height: 64,
+    marginTop: space.xs,
     zIndex: 6,
     overflow: 'visible',
   },
   goals: {
+    position: 'absolute',
+    right: space.md,
+    top: 0,
     minHeight: layout.hitTarget,
     justifyContent: 'center',
   },
@@ -394,12 +393,6 @@ const styles = StyleSheet.create({
     paddingRight: space.group,
     paddingVertical: space.sm,
     minHeight: layout.hitTarget,
-  },
-  dockWrap: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
   },
   dockPrimary: {
     flexDirection: 'row',
@@ -477,4 +470,3 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
 });
-
