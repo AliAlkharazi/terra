@@ -1,50 +1,12 @@
 import React from 'react';
 import Svg, { Circle, Ellipse, G, Path, Text as SvgText } from 'react-native-svg';
-import type { DistrictId, PocketId } from '@/types';
+import type { DistrictId } from '@/types';
 import { themeFor } from '@/theme/categoryTheme';
 
 export interface BuildingSvgProps {
   size?: number;
   overspent?: boolean;
   fill?: number;
-}
-
-type PlaceableId = Exclude<DistrictId, 'credit_card_payment'>;
-
-export function GenericBuilding({
-  size = 112,
-  overspent,
-  themeId,
-}: BuildingSvgProps & { themeId: PocketId }) {
-  const ox = 50;
-  const oy = 90;
-  const t = themeFor(themeId);
-  const top = overspent ? '#B8A898' : t.top;
-  const left = overspent ? '#8A8074' : t.left;
-  const right = overspent ? '#C9BBA8' : t.right;
-  const roofL = overspent ? '#8E422C' : t.roofL;
-  const roofR = overspent ? '#B85A3A' : t.roofR;
-  return (
-    <Svg width={size} height={size} viewBox="0 0 110 112">
-      <ContactShadow cx={52} cy={100} />
-      <IsoBox ox={ox} oy={oy} w={24} depth={18} h={17} top={top} left={left} right={right} />
-      <GableRoof ox={ox} oy={oy} w={24} depth={18} h={17} rise={9} left={roofL} right={roofR} />
-      <FaceWindow ox={ox} oy={oy} x={4} z={6} lit={!overspent} />
-      <FaceWindow ox={ox} oy={oy} x={10.5} z={6} lit />
-      <FaceWindow ox={ox} oy={oy} x={17} z={6} lit={!overspent} />
-      <Path
-        d={poly([iso(10, 0.12, 0, ox, oy), iso(14, 0.12, 0, ox, oy), iso(14, 0.12, 9, ox, oy), iso(10, 0.12, 9, ox, oy)])}
-        fill={t.accent}
-        opacity={0.85}
-      />
-    </Svg>
-  );
-}
-
-function themedBuilding(themeId: PlaceableId): React.FC<BuildingSvgProps> {
-  return function ThemedBuilding(props) {
-    return <GenericBuilding {...props} themeId={themeId} />;
-  };
 }
 
 export function iso(x: number, y: number, z: number, ox = 0, oy = 0) {
@@ -458,20 +420,10 @@ export function EmptyPlotBuilding({ size = 120 }: BuildingSvgProps) {
   );
 }
 
-export const BUILDING_BY_ID: Record<PlaceableId, React.FC<BuildingSvgProps>> = {
+export const BUILDING_BY_ID: Record<Exclude<DistrictId, 'credit_card_payment'>, React.FC<BuildingSvgProps>> = {
   dining: DinerBuilding,
   property: PropertyBuilding,
   bills: ClockTowerBuilding,
   transport: TrainStationBuilding,
   groceries: BarnBuilding,
-  supermarket: themedBuilding('supermarket'),
-  cinema: themedBuilding('cinema'),
-  library: themedBuilding('library'),
-  university: themedBuilding('university'),
-  hospital: themedBuilding('hospital'),
-  school: themedBuilding('school'),
-  factory: themedBuilding('factory'),
-  office: themedBuilding('office'),
-  mall: themedBuilding('mall'),
-  car_workshop: themedBuilding('car_workshop'),
 };

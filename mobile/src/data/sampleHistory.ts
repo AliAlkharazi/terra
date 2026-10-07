@@ -108,10 +108,8 @@ export function buildSampleHistory(currentMonth: string, districts: District[]) 
       }
     });
 
-    // Only seed the classic five — newer shop buildings start empty on the map.
-    const seedIds = new Set<DistrictId>(['dining', 'property', 'bills', 'transport', 'groceries']);
     districts
-      .filter((d) => !d.isCreditCard && seedIds.has(d.id) && d.monthlyBudget > 0)
+      .filter((d) => !d.isCreditCard && d.monthlyBudget > 0)
       .forEach((d) => allocations.push({ districtId: d.id, month, amount: d.monthlyBudget }));
   });
 

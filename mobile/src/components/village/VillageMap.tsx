@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
 import type { AllocationState, District, DistrictId, PocketId } from '@/types';
@@ -20,58 +20,26 @@ interface Props {
   onVaultPress: () => void;
 }
 
-const SCENE_W = 520;
-const SCENE_H = 480;
+const SCENE_W = 440;
+const SCENE_H = 400;
 const VAULT_SIZE = 176;
-const BUILDING_SIZE = 132;
-const EMPTY_SIZE = 110;
-
-type PlaceableId = keyof typeof BUILDING_BY_ID;
+const BUILDING_SIZE = 142;
+const EMPTY_SIZE = 118;
 
 type Pad = { x: number; y: number; rx: number; ry: number; theme?: PocketId };
 
-const CX = 260;
-const CY = 228;
-const DX = 96;
-const DY = 70;
-
-/** Isometric-ish grid offsets (col, row) → pad around vault. */
-const GRID: Record<PlaceableId, [number, number]> = {
-  dining: [-1, -1],
-  property: [1, -1],
-  groceries: [-1, 1],
-  bills: [1, 1],
-  transport: [0, 1.45],
-  supermarket: [-2, 0],
-  cinema: [2, 0],
-  library: [0, -2],
-  university: [-2, -1],
-  hospital: [2, -1],
-  school: [-2, 1],
-  factory: [2, 1],
-  office: [1, 2],
-  mall: [-1, 2],
-  car_workshop: [1, -2],
-};
-
-function padAt(col: number, row: number, theme: PocketId): Pad {
-  return {
-    x: CX + col * DX,
-    y: CY + row * DY,
-    rx: 32,
-    ry: 13,
-    theme,
-  };
-}
+const CX = 220;
+const CY = 196;
+const DX = 114;
+const DY = 82;
 
 const PADS: Record<string, Pad> = {
+  dining: { x: CX - DX, y: CY - DY, rx: 36, ry: 15, theme: 'dining' },
+  property: { x: CX + DX, y: CY - DY, rx: 36, ry: 15, theme: 'property' },
   vault: { x: CX, y: CY, rx: 46, ry: 19, theme: 'vault' },
-  ...Object.fromEntries(
-    (Object.entries(GRID) as [PlaceableId, [number, number]][]).map(([id, [col, row]]) => [
-      id,
-      padAt(col, row, id),
-    ])
-  ),
+  groceries: { x: CX - DX, y: CY + DY, rx: 36, ry: 15, theme: 'groceries' },
+  bills: { x: CX + DX, y: CY + DY, rx: 36, ry: 15, theme: 'bills' },
+  transport: { x: CX, y: CY + DY + 30, rx: 36, ry: 15, theme: 'transport' },
 };
 
 function GrassPad({ pad, empty }: { pad: Pad; empty?: boolean }) {
@@ -102,7 +70,7 @@ function place(pad: Pad, size: number, sceneW: number, sceneH: number) {
   };
 }
 
-const HIT = 54;
+const HIT = 58;
 
 function hitBox(pad: Pad, sceneW: number, sceneH: number, extra = 0) {
   const w = HIT + extra;
@@ -127,22 +95,20 @@ export function VillageMap({
   onVaultPress,
 }: Props) {
   const { width } = useWindowDimensions();
-  const sceneW = Math.min(width - 16, SCENE_W);
+  const sceneW = Math.min(width - 16, 440);
   const sceneH = sceneW * (SCENE_H / SCENE_W);
 
   const vaultLayout = place(PADS.vault, VAULT_SIZE, sceneW, sceneH);
 
-  const padKeys = useMemo(() => new Set(Object.keys(PADS)), []);
-
   const spots = districts
-    .filter((d) => !d.isCreditCard && d.id in BUILDING_BY_ID && padKeys.has(d.id))
+    .filter((d) => !d.isCreditCard && d.id in PADS && d.id in BUILDING_BY_ID)
     .map((district) => {
       const pad = PADS[district.id];
       const state = allocationStates.find((s) => s.districtId === district.id);
       const funded = placedFunded[district.id];
       const placed = funded != null && funded > 0;
       const level = placed ? buildingLevel(funded) : 0;
-      const Building = BUILDING_BY_ID[district.id as PlaceableId];
+      const Building = BUILDING_BY_ID[district.id as Exclude<DistrictId, 'credit_card_payment'>];
       return { district, pad, state, Building, placed, level, funded: funded ?? 0 };
     })
     .sort((a, b) => a.pad.y - b.pad.y);
@@ -162,18 +128,17 @@ export function VillageMap({
           </RadialGradient>
         </Defs>
 
-        <Ellipse cx={CX} cy={CY + 26} rx="238" ry="118" fill="#2F6A34" />
-        <Ellipse cx={CX} cy={CY + 6} rx="238" ry="118" fill="url(#discTop)" />
+        <Ellipse cx={CX} cy={CY + 22} rx="204" ry="104" fill="#2F6A34" />
+        <Ellipse cx={CX} cy={CY + 4} rx="204" ry="104" fill="url(#discTop)" />
 
-        <Ellipse cx={CX} cy={CY} rx="132" ry="60" fill="none" stroke={colors.vaultGold} strokeWidth="4.5" />
-        <Ellipse cx={CX} cy={CY} rx="132" ry="60" fill="none" stroke={colors.inkGoldBright} strokeWidth="1.6" opacity={0.75} />
+        <Ellipse cx={CX} cy={CY} rx="118" ry="54" fill="none" stroke={colors.vaultGold} strokeWidth="4.5" />
+        <Ellipse cx={CX} cy={CY} rx="118" ry="54" fill="none" stroke={colors.inkGoldBright} strokeWidth="1.6" opacity={0.75} />
 
-        <Ellipse cx={CX} cy={CY - 28} rx="96" ry="72" fill="url(#vaultGlow)" />
+        <Ellipse cx={CX} cy={CY - 28} rx="88" ry="68" fill="url(#vaultGlow)" />
 
         {Object.entries(PADS).map(([key, pad]) => {
           if (key === 'vault') return <GrassPad key={key} pad={pad} />;
-          const funded = placedFunded[key as DistrictId];
-          const empty = funded == null || funded <= 0;
+          const empty = placedFunded[key as DistrictId] == null;
           return <GrassPad key={key} pad={pad} empty={empty} />;
         })}
 

@@ -4,16 +4,6 @@ export type DistrictId =
   | 'transport'
   | 'property'
   | 'bills'
-  | 'supermarket'
-  | 'cinema'
-  | 'library'
-  | 'university'
-  | 'hospital'
-  | 'school'
-  | 'factory'
-  | 'office'
-  | 'mall'
-  | 'car_workshop'
   | 'credit_card_payment';
 
 export type TargetType = 'MONTHLY_NEEDED' | 'SAVINGS_BALANCE' | 'TARGET_BY_DATE';
