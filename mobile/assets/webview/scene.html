@@ -55,6 +55,11 @@ const PALETTE = {
   sign: 0x2c2018,
   signBrass: 0xb08d4f,
   coral: 0xd96c5f,
+  ice: 0xa8d4e8,
+  iceDark: 0x6fa8c4,
+  goalGold: 0xc9a24a,
+  goalCream: 0xf4e6c0,
+  goalNose: 0xe8a24b,
 };
 
 const NOTE_COLORS = { 5: 0x9a95a3, 10: 0xb23b3b, 20: 0x1f5fa8, 50: 0xd67e1f, 100: 0x2f7d4f, 200: 0xc9932e };
@@ -512,6 +517,214 @@ function applyHealth(states) {
   refreshAllPiles(true);
 }
 
+/** Fallback when DTO omits healthPct — stage labels only, no money math. */
+const STAGE_HEALTH = { thriving: 90, stable: 65, strained: 40, wilting: 15 };
+
+/**
+ * District pads/piles read ONLY from window.__terraWorldView.districts.
+ * Uses healthPct (or stage) for pad color and availableCents for pile height/sign.
+ * Missing scene meshes are skipped quietly.
+ */
+function applyWorldViewDistricts(animate) {
+  const view = window.__terraWorldView;
+  if (!view || !Array.isArray(view.districts)) return;
+
+  for (const d of view.districts) {
+    const p = piles.find((x) => x.districtId === d.id);
+    if (!p) continue;
+
+    const healthPct =
+      typeof d.healthPct === 'number'
+        ? d.healthPct
+        : STAGE_HEALTH[d.stage] != null
+        ? STAGE_HEALTH[d.stage]
+        : p.healthPct;
+    p.healthPct = healthPct;
+    p.topMat.color.copy(healthColor(healthPct));
+
+    if (typeof d.availableCents === 'number') {
+      p.amount = Math.max(0, d.availableCents) / 100;
+    }
+    if (typeof d.label === 'string' && d.label) {
+      p.label = d.label;
+    }
+  }
+
+  for (const p of piles) {
+    updateMoneyPile(p.pile, p.amount, animate);
+    p.sign.userData.updateText(p.label, '€' + Math.round(p.amount));
+  }
+  rebuildAllCoins(piles);
+}
+
+/**
+ * Bank / vault tower from __terraWorldView.
+ * Floors/height driven by readyToAssignCents (assignable vault); vaultCents is ignored here (gross pre-lock).
+ * Reuses terraSetBank visual language: vault.amount euros → money-pile height + AVAILABLE sign.
+ */
+function applyWorldViewBank(animate) {
+  if (!vault) return;
+  const view = window.__terraWorldView;
+  if (!view || typeof view.readyToAssignCents !== 'number') return;
+
+  const euros = Math.max(0, view.readyToAssignCents) / 100;
+  // Simple floor scale for future tower stacks (clamp 1–8); pile height still uses amountToHeight(euros).
+  const floors = Math.max(1, Math.min(8, 1 + Math.floor(euros / 50)));
+  vault.amount = euros;
+  vault.floors = floors;
+  updateMoneyPile(vault.pile, vault.amount, animate);
+  // Keep brick footprint scale from buildVault while height animates via updateMoneyPile.
+  vault.pile.brick.scale.x = 1.6;
+  vault.pile.brick.scale.z = 1.6;
+  vault.sign.userData.updateText('AVAILABLE', '€' + Math.round(vault.amount));
+  rebuildAllCoins([vault]);
+}
+
+// =====================================================================
+// LOCK MARKERS — cheap ice cubes from __terraWorldView.locks only (presence, no date math).
+// =====================================================================
+let lockMarkers = [];
+
+function clearLockMarkers() {
+  for (const m of lockMarkers) {
+    if (m.group.parent) m.group.parent.remove(m.group);
+  }
+  lockMarkers = [];
+}
+
+/** Toy ice-lock: two boxes, no bevels / no unlock countdown. */
+function makeLockMarkerMesh(lockId) {
+  const group = new THREE.Group();
+  const iceMat = new THREE.MeshStandardMaterial({
+    color: PALETTE.ice,
+    roughness: 0.35,
+    metalness: 0.08,
+    transparent: true,
+    opacity: 0.92,
+  });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 0.18), iceMat);
+  body.position.y = 0.09;
+  body.castShadow = true;
+  group.add(body);
+  const shackle = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.1, 0.06),
+    new THREE.MeshStandardMaterial({ color: PALETTE.iceDark, roughness: 0.4, metalness: 0.15 })
+  );
+  shackle.position.y = 0.22;
+  group.add(shackle);
+  group.userData.lockId = lockId;
+  return group;
+}
+
+function applyWorldViewLocks() {
+  clearLockMarkers();
+  const view = window.__terraWorldView;
+  if (!view || !Array.isArray(view.locks)) return;
+
+  const vaultLocks = [];
+  const byDistrict = {};
+  for (const lock of view.locks) {
+    if (!lock || lock.id == null) continue;
+    const pocket = lock.pocketId || 'vault';
+    if (pocket === 'vault') vaultLocks.push(lock);
+    else {
+      if (!byDistrict[pocket]) byDistrict[pocket] = [];
+      byDistrict[pocket].push(lock);
+    }
+  }
+
+  vaultLocks.forEach((lock, i) => {
+    if (!vault) return;
+    const marker = makeLockMarkerMesh(lock.id);
+    const angle = -0.6 + i * 0.45;
+    marker.position.set(Math.cos(angle) * 0.95, 0.1, Math.sin(angle) * 0.95);
+    vault.group.add(marker);
+    lockMarkers.push({ id: lock.id, group: marker });
+  });
+
+  Object.keys(byDistrict).forEach((districtId) => {
+    const pile = piles.find((p) => p.districtId === districtId);
+    if (!pile) return;
+    byDistrict[districtId].forEach((lock, i) => {
+      const marker = makeLockMarkerMesh(lock.id);
+      marker.position.set(0.42 + i * 0.14, 0.12, -0.38);
+      pile.group.add(marker);
+      lockMarkers.push({ id: lock.id, group: marker });
+    });
+  });
+}
+
+// =====================================================================
+// GOAL MARKERS — sparse paper-airplane proxies from __terraWorldView.goals.
+// Placement rule: dedicated goals cluster just north of the bank (not on district pads).
+// =====================================================================
+let goalMarkers = [];
+let goalsCluster = null;
+
+function ensureGoalsCluster() {
+  if (goalsCluster) return goalsCluster;
+  goalsCluster = new THREE.Group();
+  goalsCluster.position.set(0, 0.4, -1.4);
+  worldGroup.add(goalsCluster);
+  return goalsCluster;
+}
+
+function clearGoalMarkers() {
+  for (const m of goalMarkers) {
+    if (m.group.parent) m.group.parent.remove(m.group);
+  }
+  goalMarkers = [];
+}
+
+/** GoalAirplane-inspired proxy: gold wing + cream fuselage + nose (three boxes). */
+function makeGoalMarkerMesh(goalId) {
+  const group = new THREE.Group();
+  const wing = new THREE.Mesh(
+    new THREE.BoxGeometry(0.38, 0.02, 0.16),
+    new THREE.MeshStandardMaterial({ color: PALETTE.goalGold, roughness: 0.45 })
+  );
+  wing.position.y = 0.08;
+  wing.castShadow = true;
+  group.add(wing);
+  const fuselage = new THREE.Mesh(
+    new THREE.BoxGeometry(0.28, 0.04, 0.06),
+    new THREE.MeshStandardMaterial({ color: PALETTE.goalCream, roughness: 0.5 })
+  );
+  fuselage.position.set(0.02, 0.1, 0);
+  group.add(fuselage);
+  const nose = new THREE.Mesh(
+    new THREE.BoxGeometry(0.08, 0.03, 0.05),
+    new THREE.MeshStandardMaterial({ color: PALETTE.goalNose, roughness: 0.4 })
+  );
+  nose.position.set(0.18, 0.1, 0);
+  group.add(nose);
+  group.userData.goalId = goalId;
+  group.rotation.y = -0.35;
+  return group;
+}
+
+function applyWorldViewGoals() {
+  clearGoalMarkers();
+  const view = window.__terraWorldView;
+  if (!view || !Array.isArray(view.goals) || view.goals.length === 0) return;
+
+  const cluster = ensureGoalsCluster();
+  const n = view.goals.length;
+  view.goals.forEach((goal, i) => {
+    if (!goal || goal.id == null) return;
+    const marker = makeGoalMarkerMesh(goal.id);
+    const t = n === 1 ? 0.5 : i / (n - 1);
+    marker.position.set((t - 0.5) * 1.5, 0.12 + (i % 2) * 0.1, 0);
+    // Optional scale from DTO fields only (no goal progress math beyond reading ratio).
+    const target = typeof goal.targetCents === 'number' ? goal.targetCents : 0;
+    const progress = typeof goal.progressCents === 'number' ? goal.progressCents : 0;
+    const ratio = target > 0 ? Math.max(0, Math.min(1, progress / target)) : 0;
+    marker.scale.setScalar(0.85 + ratio * 0.4);
+    cluster.add(marker);
+    goalMarkers.push({ id: goal.id, group: marker });
+  });
+}
+
 function refreshAllPiles(animate) {
   for (const p of piles) {
     updateMoneyPile(p.pile, p.amount, animate);
@@ -597,60 +810,239 @@ function triggerSave(amount) {
 }
 
 // =====================================================================
-// INTERACTION
+// INTERACTION — hover tint + press pulse; orbit only after drag slop (no HUD currency).
 // =====================================================================
-let dragging = false;
-let lastX = 0, lastY = 0;
-renderer.domElement.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
-window.addEventListener('pointermove', (e) => {
-  if (!dragging) return;
-  const dx = e.clientX - lastX;
-  lastX = e.clientX; lastY = e.clientY;
-  camAngle -= dx * 0.006;
-  updateCameraPosition();
-});
-window.addEventListener('pointerup', () => { dragging = false; });
+const TAP_SLOP_PX = 8;
+const HOVER_EMISSIVE = new THREE.Color(0x3a5a2a);
+const pickRaycaster = new THREE.Raycaster();
+const pickNdc = new THREE.Vector2();
 
+let pointerDown = false;
+let orbiting = false;
 let downX = 0, downY = 0;
-renderer.domElement.addEventListener('pointerdown', (e) => { downX = e.clientX; downY = e.clientY; });
-renderer.domElement.addEventListener('pointerup', (e) => {
-  const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
-  if (moved > 6) return;
-  const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(ndc, camera);
-  const hits = raycaster.intersectObjects(piles.map((p) => p.group), true);
+let lastX = 0, lastY = 0;
+let hoverTarget = null; // { kind, id, group }
+
+function setPickNdc(clientX, clientY) {
+  pickNdc.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
+}
+
+function forEachEmissiveMaterial(root, fn) {
+  root.traverse((obj) => {
+    if (!obj.isMesh || !obj.material) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    for (const mat of mats) {
+      if (mat && mat.emissive) fn(mat);
+    }
+  });
+}
+
+function clearHover() {
+  if (!hoverTarget) return;
+  forEachEmissiveMaterial(hoverTarget.group, (mat) => {
+    if (mat.userData._hoverEmissive) {
+      mat.emissive.copy(mat.userData._hoverEmissive);
+      delete mat.userData._hoverEmissive;
+    }
+    mat.emissiveIntensity = mat.userData._hoverEmissiveIntensity ?? mat.emissiveIntensity;
+    delete mat.userData._hoverEmissiveIntensity;
+  });
+  hoverTarget = null;
+  renderer.domElement.style.cursor = 'default';
+}
+
+function applyHover(target) {
+  if (hoverTarget && target && hoverTarget.kind === target.kind && hoverTarget.id === target.id) return;
+  clearHover();
+  if (!target) return;
+  forEachEmissiveMaterial(target.group, (mat) => {
+    mat.userData._hoverEmissive = mat.emissive.clone();
+    mat.userData._hoverEmissiveIntensity = mat.emissiveIntensity ?? 1;
+    mat.emissive.copy(HOVER_EMISSIVE);
+    mat.emissiveIntensity = 0.55;
+  });
+  hoverTarget = target;
+  renderer.domElement.style.cursor = 'pointer';
+}
+
+/** Resolve topmost pickable: goal → lock → bank → district. */
+function pickTargetAt(clientX, clientY) {
+  setPickNdc(clientX, clientY);
+  pickRaycaster.setFromCamera(pickNdc, camera);
+
+  const goalHits = pickRaycaster.intersectObjects(goalMarkers.map((m) => m.group), true);
+  if (goalHits.length > 0) {
+    let obj = goalHits[0].object;
+    while (obj && obj.userData.goalId == null) obj = obj.parent;
+    if (obj && obj.userData.goalId != null) {
+      return { kind: 'goal', id: obj.userData.goalId, group: obj };
+    }
+  }
+
+  const lockHits = pickRaycaster.intersectObjects(lockMarkers.map((m) => m.group), true);
+  if (lockHits.length > 0) {
+    let obj = lockHits[0].object;
+    while (obj && obj.userData.lockId == null) obj = obj.parent;
+    if (obj && obj.userData.lockId != null) {
+      return { kind: 'lock', id: obj.userData.lockId, group: obj };
+    }
+  }
+
+  if (vault) {
+    const bankHits = pickRaycaster.intersectObjects([vault.group], true);
+    if (bankHits.length > 0) {
+      // Ignore lock children on the vault — those already handled above.
+      let obj = bankHits[0].object;
+      let onLock = false;
+      while (obj) {
+        if (obj.userData.lockId != null) { onLock = true; break; }
+        obj = obj.parent;
+      }
+      if (!onLock) return { kind: 'bank', id: 'vault', group: vault.group };
+    }
+  }
+
+  const hits = pickRaycaster.intersectObjects(piles.map((p) => p.group), true);
   if (hits.length > 0) {
     let obj = hits[0].object;
     while (obj.parent && !piles.some((p) => p.group === obj)) obj = obj.parent;
     const pile = piles.find((p) => p.group === obj);
-    if (pile) {
-      selectPile(pile);
-      postToReactNative({ type: 'districtPress', districtId: pile.districtId });
-    }
+    if (pile) return { kind: 'district', id: pile.districtId, group: pile.group };
   }
+  return null;
+}
+
+function pulsePress(group, onDone) {
+  const finish = () => { if (onDone) onDone(); };
+  if (!group) { finish(); return; }
+  if (!window.gsap) {
+    finish();
+    return;
+  }
+  const sx = group.scale.x;
+  const sy = group.scale.y;
+  const sz = group.scale.z;
+  gsap.fromTo(
+    group.scale,
+    { x: sx * 1.08, y: sy * 1.08, z: sz * 1.08 },
+    {
+      x: sx,
+      y: sy,
+      z: sz,
+      duration: 0.18,
+      ease: 'power2.out',
+      onComplete: finish,
+    }
+  );
+}
+
+function emitPickedPress(target) {
+  if (!target) return;
+  pulsePress(target.group, () => {
+    postObjectPress(target.kind, target.id);
+    if (target.kind === 'district') {
+      postToReactNative({ type: 'districtPress', districtId: target.id });
+    }
+  });
+}
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  pointerDown = true;
+  orbiting = false;
+  downX = lastX = e.clientX;
+  downY = lastY = e.clientY;
+});
+
+window.addEventListener('pointermove', (e) => {
+  if (pointerDown) {
+    const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+    if (moved > TAP_SLOP_PX) {
+      orbiting = true;
+      clearHover();
+      const dx = e.clientX - lastX;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      camAngle -= dx * 0.006;
+      updateCameraPosition();
+    }
+    return;
+  }
+  // Hover affordance when idle (no press).
+  applyHover(pickTargetAt(e.clientX, e.clientY));
+});
+
+window.addEventListener('pointerup', (e) => {
+  if (!pointerDown) return;
+  pointerDown = false;
+  if (orbiting) {
+    orbiting = false;
+    return;
+  }
+  const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+  if (moved > TAP_SLOP_PX) return;
+  const target = pickTargetAt(e.clientX, e.clientY);
+  if (target) emitPickedPress(target);
+});
+
+window.addEventListener('pointerleave', () => {
+  pointerDown = false;
+  orbiting = false;
+  clearHover();
 });
 
 function selectPile(pile) {
-  if (!window.gsap) return;
-  gsap.to(pile.group.position, { y: 0.12, duration: 0.25, ease: 'power2.out', yoyo: true, repeat: 1 });
+  if (!pile) return;
+  pulsePress(pile.group);
 }
 
 function postToReactNative(payload) {
   if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(payload));
 }
 
+/** Emit objectPress for district | bank | goal | lock (bank/goal/lock meshes may call later). */
+function postObjectPress(kind, id) {
+  postToReactNative({ type: 'objectPress', kind: kind, id: String(id) });
+}
+window.postObjectPress = postObjectPress;
+
 // =====================================================================
 // BRIDGE — signatures preserved exactly; amount is an optional extra
 // argument React Native may now pass for better animations.
 // =====================================================================
-window.terraSetDistricts = function (districtsJson) { buildCity(JSON.parse(districtsJson)); };
+window.terraSetDistricts = function (districtsJson) {
+  clearLockMarkers();
+  clearGoalMarkers();
+  buildCity(JSON.parse(districtsJson));
+  // Re-apply DTO visuals if world view arrived before city meshes existed.
+  applyWorldViewDistricts(false);
+  applyWorldViewBank(false);
+  applyWorldViewLocks();
+  applyWorldViewGoals();
+};
 window.terraSetHealth = function (statesJson) { applyHealth(JSON.parse(statesJson)); };
 window.terraSetBank = function (bankJson) {
+  // Legacy path — prefer terraSetWorldView / __terraWorldView.readyToAssignCents going forward.
   const bank = JSON.parse(bankJson);
   if (!vault) return;
   vault.amount = bank.totalSaved || 0;
+  vault.floors = Math.max(1, Math.min(8, bank.floors || 1 + Math.floor(vault.amount / 50)));
   refreshAllPiles(true);
+};
+// WareTrack-style full world DTO — districts + bank + locks + goals from __terraWorldView.
+window.__terraWorldView = null;
+window.terraSetWorldView = function (worldViewJson) {
+  try {
+    window.__terraWorldView = typeof worldViewJson === 'string' ? JSON.parse(worldViewJson) : worldViewJson;
+    applyWorldViewDistricts(true);
+    applyWorldViewBank(true);
+    applyWorldViewLocks();
+    applyWorldViewGoals();
+  } catch (err) {
+    console.warn('[Terra] terraSetWorldView parse failed', err);
+    window.__terraWorldView = null;
+    clearLockMarkers();
+    clearGoalMarkers();
+  }
 };
 window.terraTriggerSpend = function (districtId, amount) { triggerSpend(districtId, amount); };
 window.terraTriggerSave = function (amount) { triggerSave(amount); };
@@ -707,8 +1099,69 @@ if (!window.ReactNativeWebView) {
   applyHealth(DEMO_HEALTH);
   window.terraSetBank(JSON.stringify({ totalSaved: 2430, floors: 4 }));
 
-  setTimeout(() => triggerSpend('shopping', 47), 2200);
-  setTimeout(() => triggerSave(50), 4200);
+  // Fixture: healthy vs wilting shopping pad via terraSetWorldView (DTO fields only).
+  const demoDistricts = DEMO_DISTRICTS.map((d) => ({
+    id: d.id,
+    label: d.label,
+    availableCents: (d.monthlyBudget || 0) * 100,
+    assignedCents: (d.monthlyBudget || 0) * 100,
+    spentCents: 0,
+    lockedCents: 0,
+    healthPct: (DEMO_HEALTH.find((h) => h.districtId === d.id) || {}).healthPct || 100,
+    stage: 'stable',
+  }));
+  const DEMO_LOCKS = [
+    { id: 'lock-vault-1', amountCents: 2500, unlockAt: '2026-10-01T00:00:00.000Z', pocketId: 'vault' },
+    { id: 'lock-groceries-1', amountCents: 4000, unlockAt: '2026-10-01T00:00:00.000Z', pocketId: 'groceries' },
+  ];
+  const DEMO_GOALS = [
+    { id: 'goal-vacation', name: 'Vacation', targetCents: 120000, progressCents: 30000 },
+    { id: 'goal-emergency', name: 'Emergency', targetCents: 200000, progressCents: 150000 },
+  ];
+  setTimeout(() => {
+    window.terraSetWorldView(JSON.stringify({
+      monthKey: '2026-09',
+      asOf: new Date().toISOString(),
+      vaultCents: 40000,
+      readyToAssignCents: 2500,
+      lockedTotalCents: 6500,
+      districts: demoDistricts.map((d) =>
+        d.id === 'shopping' ? { ...d, healthPct: 12, stage: 'wilting', availableCents: 1800 } : d
+      ),
+      goals: DEMO_GOALS,
+      locks: DEMO_LOCKS,
+    }));
+  }, 1600);
+  setTimeout(() => {
+    // Empty goals removes markers (done-when).
+    window.terraSetWorldView(JSON.stringify({
+      monthKey: '2026-09',
+      asOf: new Date().toISOString(),
+      vaultCents: 40000,
+      readyToAssignCents: 240000,
+      lockedTotalCents: 6500,
+      districts: demoDistricts.map((d) =>
+        d.id === 'shopping' ? { ...d, healthPct: 92, stage: 'thriving', availableCents: 15000 } : d
+      ),
+      goals: [],
+      locks: DEMO_LOCKS,
+    }));
+  }, 3200);
+  setTimeout(() => {
+    window.terraSetWorldView(JSON.stringify({
+      monthKey: '2026-09',
+      asOf: new Date().toISOString(),
+      vaultCents: 40000,
+      readyToAssignCents: 240000,
+      lockedTotalCents: 6500,
+      districts: demoDistricts,
+      goals: DEMO_GOALS,
+      locks: DEMO_LOCKS,
+    }));
+  }, 4000);
+
+  setTimeout(() => triggerSpend('shopping', 47), 4800);
+  setTimeout(() => triggerSave(50), 6200);
 }
 </script>
 </body>
