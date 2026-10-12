@@ -810,68 +810,189 @@ function triggerSave(amount) {
 }
 
 // =====================================================================
-// INTERACTION
+// INTERACTION — hover tint + press pulse; orbit only after drag slop (no HUD currency).
 // =====================================================================
-let dragging = false;
-let lastX = 0, lastY = 0;
-renderer.domElement.addEventListener('pointerdown', (e) => { dragging = true; lastX = e.clientX; lastY = e.clientY; });
-window.addEventListener('pointermove', (e) => {
-  if (!dragging) return;
-  const dx = e.clientX - lastX;
-  lastX = e.clientX; lastY = e.clientY;
-  camAngle -= dx * 0.006;
-  updateCameraPosition();
-});
-window.addEventListener('pointerup', () => { dragging = false; });
+const TAP_SLOP_PX = 8;
+const HOVER_EMISSIVE = new THREE.Color(0x3a5a2a);
+const pickRaycaster = new THREE.Raycaster();
+const pickNdc = new THREE.Vector2();
 
+let pointerDown = false;
+let orbiting = false;
 let downX = 0, downY = 0;
-renderer.domElement.addEventListener('pointerdown', (e) => { downX = e.clientX; downY = e.clientY; });
-renderer.domElement.addEventListener('pointerup', (e) => {
-  const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
-  if (moved > 6) return;
-  const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
-  const raycaster = new THREE.Raycaster();
-  raycaster.setFromCamera(ndc, camera);
+let lastX = 0, lastY = 0;
+let hoverTarget = null; // { kind, id, group }
 
-  // Sparse markers before district pads.
-  const goalHits = raycaster.intersectObjects(goalMarkers.map((m) => m.group), true);
+function setPickNdc(clientX, clientY) {
+  pickNdc.set((clientX / window.innerWidth) * 2 - 1, -(clientY / window.innerHeight) * 2 + 1);
+}
+
+function forEachEmissiveMaterial(root, fn) {
+  root.traverse((obj) => {
+    if (!obj.isMesh || !obj.material) return;
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    for (const mat of mats) {
+      if (mat && mat.emissive) fn(mat);
+    }
+  });
+}
+
+function clearHover() {
+  if (!hoverTarget) return;
+  forEachEmissiveMaterial(hoverTarget.group, (mat) => {
+    if (mat.userData._hoverEmissive) {
+      mat.emissive.copy(mat.userData._hoverEmissive);
+      delete mat.userData._hoverEmissive;
+    }
+    mat.emissiveIntensity = mat.userData._hoverEmissiveIntensity ?? mat.emissiveIntensity;
+    delete mat.userData._hoverEmissiveIntensity;
+  });
+  hoverTarget = null;
+  renderer.domElement.style.cursor = 'default';
+}
+
+function applyHover(target) {
+  if (hoverTarget && target && hoverTarget.kind === target.kind && hoverTarget.id === target.id) return;
+  clearHover();
+  if (!target) return;
+  forEachEmissiveMaterial(target.group, (mat) => {
+    mat.userData._hoverEmissive = mat.emissive.clone();
+    mat.userData._hoverEmissiveIntensity = mat.emissiveIntensity ?? 1;
+    mat.emissive.copy(HOVER_EMISSIVE);
+    mat.emissiveIntensity = 0.55;
+  });
+  hoverTarget = target;
+  renderer.domElement.style.cursor = 'pointer';
+}
+
+/** Resolve topmost pickable: goal → lock → bank → district. */
+function pickTargetAt(clientX, clientY) {
+  setPickNdc(clientX, clientY);
+  pickRaycaster.setFromCamera(pickNdc, camera);
+
+  const goalHits = pickRaycaster.intersectObjects(goalMarkers.map((m) => m.group), true);
   if (goalHits.length > 0) {
     let obj = goalHits[0].object;
     while (obj && obj.userData.goalId == null) obj = obj.parent;
     if (obj && obj.userData.goalId != null) {
-      postObjectPress('goal', obj.userData.goalId);
-      return;
+      return { kind: 'goal', id: obj.userData.goalId, group: obj };
     }
   }
 
-  // Lock markers so ice cubes win over the pad underneath.
-  const lockHits = raycaster.intersectObjects(lockMarkers.map((m) => m.group), true);
+  const lockHits = pickRaycaster.intersectObjects(lockMarkers.map((m) => m.group), true);
   if (lockHits.length > 0) {
     let obj = lockHits[0].object;
     while (obj && obj.userData.lockId == null) obj = obj.parent;
     if (obj && obj.userData.lockId != null) {
-      postObjectPress('lock', obj.userData.lockId);
-      return;
+      return { kind: 'lock', id: obj.userData.lockId, group: obj };
     }
   }
 
-  const hits = raycaster.intersectObjects(piles.map((p) => p.group), true);
+  if (vault) {
+    const bankHits = pickRaycaster.intersectObjects([vault.group], true);
+    if (bankHits.length > 0) {
+      // Ignore lock children on the vault — those already handled above.
+      let obj = bankHits[0].object;
+      let onLock = false;
+      while (obj) {
+        if (obj.userData.lockId != null) { onLock = true; break; }
+        obj = obj.parent;
+      }
+      if (!onLock) return { kind: 'bank', id: 'vault', group: vault.group };
+    }
+  }
+
+  const hits = pickRaycaster.intersectObjects(piles.map((p) => p.group), true);
   if (hits.length > 0) {
     let obj = hits[0].object;
     while (obj.parent && !piles.some((p) => p.group === obj)) obj = obj.parent;
     const pile = piles.find((p) => p.group === obj);
-    if (pile) {
-      selectPile(pile);
-      // New WareTrack shape + legacy districtPress during transition.
-      postObjectPress('district', pile.districtId);
-      postToReactNative({ type: 'districtPress', districtId: pile.districtId });
-    }
+    if (pile) return { kind: 'district', id: pile.districtId, group: pile.group };
   }
+  return null;
+}
+
+function pulsePress(group, onDone) {
+  const finish = () => { if (onDone) onDone(); };
+  if (!group) { finish(); return; }
+  if (!window.gsap) {
+    finish();
+    return;
+  }
+  const sx = group.scale.x;
+  const sy = group.scale.y;
+  const sz = group.scale.z;
+  gsap.fromTo(
+    group.scale,
+    { x: sx * 1.08, y: sy * 1.08, z: sz * 1.08 },
+    {
+      x: sx,
+      y: sy,
+      z: sz,
+      duration: 0.18,
+      ease: 'power2.out',
+      onComplete: finish,
+    }
+  );
+}
+
+function emitPickedPress(target) {
+  if (!target) return;
+  pulsePress(target.group, () => {
+    postObjectPress(target.kind, target.id);
+    if (target.kind === 'district') {
+      postToReactNative({ type: 'districtPress', districtId: target.id });
+    }
+  });
+}
+
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  pointerDown = true;
+  orbiting = false;
+  downX = lastX = e.clientX;
+  downY = lastY = e.clientY;
+});
+
+window.addEventListener('pointermove', (e) => {
+  if (pointerDown) {
+    const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+    if (moved > TAP_SLOP_PX) {
+      orbiting = true;
+      clearHover();
+      const dx = e.clientX - lastX;
+      lastX = e.clientX;
+      lastY = e.clientY;
+      camAngle -= dx * 0.006;
+      updateCameraPosition();
+    }
+    return;
+  }
+  // Hover affordance when idle (no press).
+  applyHover(pickTargetAt(e.clientX, e.clientY));
+});
+
+window.addEventListener('pointerup', (e) => {
+  if (!pointerDown) return;
+  pointerDown = false;
+  if (orbiting) {
+    orbiting = false;
+    return;
+  }
+  const moved = Math.hypot(e.clientX - downX, e.clientY - downY);
+  if (moved > TAP_SLOP_PX) return;
+  const target = pickTargetAt(e.clientX, e.clientY);
+  if (target) emitPickedPress(target);
+});
+
+window.addEventListener('pointerleave', () => {
+  pointerDown = false;
+  orbiting = false;
+  clearHover();
 });
 
 function selectPile(pile) {
-  if (!window.gsap) return;
-  gsap.to(pile.group.position, { y: 0.12, duration: 0.25, ease: 'power2.out', yoyo: true, repeat: 1 });
+  if (!pile) return;
+  pulsePress(pile.group);
 }
 
 function postToReactNative(payload) {
