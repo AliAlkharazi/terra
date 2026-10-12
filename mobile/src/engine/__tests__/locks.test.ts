@@ -1,5 +1,5 @@
 import { lockedTotal, unlockAtFromDays } from '../locks';
-import { computeMonthPreview } from '../preview';
+import { computeMonthPreview, summarizeMonthPreview } from '../preview';
 import type { AllocationState, District, MoneyLock } from '@/types';
 
 describe('lockedTotal', () => {
@@ -62,5 +62,10 @@ describe('computeMonthPreview', () => {
     expect(withLock.payments.some((p) => p.kind === 'unlock' && p.amount === 50)).toBe(true);
     expect(withLock.endNext - without.endNext).toBe(50);
     expect(withLock.rollovers.find((r) => r.districtId === 'groceries')?.amount).toBe(250);
+
+    const chip = summarizeMonthPreview(withLock);
+    expect(chip.unlockCount).toBe(1);
+    expect(chip.nextShort.length).toBeGreaterThan(0);
+    expect(chip.endNext).toBe(withLock.endNext);
   });
 });

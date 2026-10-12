@@ -130,3 +130,19 @@ export function computeMonthPreview(input: {
     rollovers,
   };
 }
+
+/** Chip fields for WorldScreen — reads MonthPreview only (no second forecast model). */
+export type MonthPreviewChipSummary = {
+  nextShort: string;
+  unlockCount: number;
+  endNext: number;
+};
+
+export function summarizeMonthPreview(preview: MonthPreview): MonthPreviewChipSummary {
+  const unlockCount = preview.payments.filter((p) => p.kind === 'unlock').length;
+  return {
+    nextShort: monthShort(preview.nextMonth),
+    unlockCount,
+    endNext: preview.endNext,
+  };
+}

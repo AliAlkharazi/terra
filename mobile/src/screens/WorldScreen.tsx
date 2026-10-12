@@ -10,6 +10,7 @@ import { VillageMap } from '@/components/village/VillageMap';
 import { WorldWebView } from '@/components/WorldWebView';
 import { Scene3DBoundary } from '@/components/Scene3DBoundary';
 import { WorldStatusStrip } from '@/components/WorldStatusStrip';
+import { PreviewTimelineChip } from '@/components/PreviewTimelineChip';
 import { DistrictQuickSheet } from '@/components/DistrictQuickSheet';
 import { TapButton } from '@/components/TapButton';
 import { GoalAirplane } from '@/components/GoalAirplane';
@@ -18,6 +19,7 @@ import { colors, healthColor, radius, space, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { computeInsights } from '@/engine/insights';
 import { buildTerraWorldViewDTO } from '@/engine/terraWorldView';
+import { computeMonthPreview, summarizeMonthPreview } from '@/engine/preview';
 import { readyToAssignToBankState } from '@/engine/ynabEngine';
 import type { DistrictId } from '@/types';
 import type { TerraWorldObjectPress } from '@/types/worldView';
@@ -99,6 +101,18 @@ export function WorldScreen({ navigation }: Props) {
       }),
     [districts, allocationStates, transactions, vault, currentMonth]
   );
+
+  const previewChip = useMemo(() => {
+    const preview = computeMonthPreview({
+      districts,
+      states: allocationStates,
+      locks: locks ?? [],
+      transactions,
+      vault,
+      month: currentMonth,
+    });
+    return summarizeMonthPreview(preview);
+  }, [districts, allocationStates, locks, transactions, vault, currentMonth]);
 
   const openDistrictQuickSheet = useCallback((districtId: DistrictId) => {
     setQuickDistrictId(districtId);
@@ -232,6 +246,11 @@ export function WorldScreen({ navigation }: Props) {
           worldView={worldView}
           onReadyPress={() => navigation.navigate('Assign')}
           onLockedPress={() => navigation.navigate('Lock')}
+        />
+
+        <PreviewTimelineChip
+          summary={previewChip}
+          onPress={() => navigation.navigate('Preview')}
         />
 
         <DistrictQuickSheet
