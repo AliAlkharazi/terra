@@ -55,6 +55,8 @@ const PALETTE = {
   sign: 0x2c2018,
   signBrass: 0xb08d4f,
   coral: 0xd96c5f,
+  ice: 0xa8d4e8,
+  iceDark: 0x6fa8c4,
 };
 
 const NOTE_COLORS = { 5: 0x9a95a3, 10: 0xb23b3b, 20: 0x1f5fa8, 50: 0xd67e1f, 100: 0x2f7d4f, 200: 0xc9932e };
@@ -575,6 +577,80 @@ function applyWorldViewBank(animate) {
   rebuildAllCoins([vault]);
 }
 
+// =====================================================================
+// LOCK MARKERS — cheap ice cubes from __terraWorldView.locks only (presence, no date math).
+// =====================================================================
+let lockMarkers = [];
+
+function clearLockMarkers() {
+  for (const m of lockMarkers) {
+    if (m.group.parent) m.group.parent.remove(m.group);
+  }
+  lockMarkers = [];
+}
+
+/** Toy ice-lock: two boxes, no bevels / no unlock countdown. */
+function makeLockMarkerMesh(lockId) {
+  const group = new THREE.Group();
+  const iceMat = new THREE.MeshStandardMaterial({
+    color: PALETTE.ice,
+    roughness: 0.35,
+    metalness: 0.08,
+    transparent: true,
+    opacity: 0.92,
+  });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.18, 0.18), iceMat);
+  body.position.y = 0.09;
+  body.castShadow = true;
+  group.add(body);
+  const shackle = new THREE.Mesh(
+    new THREE.BoxGeometry(0.12, 0.1, 0.06),
+    new THREE.MeshStandardMaterial({ color: PALETTE.iceDark, roughness: 0.4, metalness: 0.15 })
+  );
+  shackle.position.y = 0.22;
+  group.add(shackle);
+  group.userData.lockId = lockId;
+  return group;
+}
+
+function applyWorldViewLocks() {
+  clearLockMarkers();
+  const view = window.__terraWorldView;
+  if (!view || !Array.isArray(view.locks)) return;
+
+  const vaultLocks = [];
+  const byDistrict = {};
+  for (const lock of view.locks) {
+    if (!lock || lock.id == null) continue;
+    const pocket = lock.pocketId || 'vault';
+    if (pocket === 'vault') vaultLocks.push(lock);
+    else {
+      if (!byDistrict[pocket]) byDistrict[pocket] = [];
+      byDistrict[pocket].push(lock);
+    }
+  }
+
+  vaultLocks.forEach((lock, i) => {
+    if (!vault) return;
+    const marker = makeLockMarkerMesh(lock.id);
+    const angle = -0.6 + i * 0.45;
+    marker.position.set(Math.cos(angle) * 0.95, 0.1, Math.sin(angle) * 0.95);
+    vault.group.add(marker);
+    lockMarkers.push({ id: lock.id, group: marker });
+  });
+
+  Object.keys(byDistrict).forEach((districtId) => {
+    const pile = piles.find((p) => p.districtId === districtId);
+    if (!pile) return;
+    byDistrict[districtId].forEach((lock, i) => {
+      const marker = makeLockMarkerMesh(lock.id);
+      marker.position.set(0.42 + i * 0.14, 0.12, -0.38);
+      pile.group.add(marker);
+      lockMarkers.push({ id: lock.id, group: marker });
+    });
+  });
+}
+
 function refreshAllPiles(animate) {
   for (const p of piles) {
     updateMoneyPile(p.pile, p.amount, animate);
@@ -682,6 +758,18 @@ renderer.domElement.addEventListener('pointerup', (e) => {
   const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
   const raycaster = new THREE.Raycaster();
   raycaster.setFromCamera(ndc, camera);
+
+  // Lock markers first so ice cubes win over the pad underneath.
+  const lockHits = raycaster.intersectObjects(lockMarkers.map((m) => m.group), true);
+  if (lockHits.length > 0) {
+    let obj = lockHits[0].object;
+    while (obj && obj.userData.lockId == null) obj = obj.parent;
+    if (obj && obj.userData.lockId != null) {
+      postObjectPress('lock', obj.userData.lockId);
+      return;
+    }
+  }
+
   const hits = raycaster.intersectObjects(piles.map((p) => p.group), true);
   if (hits.length > 0) {
     let obj = hits[0].object;
@@ -716,10 +804,12 @@ window.postObjectPress = postObjectPress;
 // argument React Native may now pass for better animations.
 // =====================================================================
 window.terraSetDistricts = function (districtsJson) {
+  clearLockMarkers();
   buildCity(JSON.parse(districtsJson));
   // Re-apply DTO visuals if world view arrived before city meshes existed.
   applyWorldViewDistricts(false);
   applyWorldViewBank(false);
+  applyWorldViewLocks();
 };
 window.terraSetHealth = function (statesJson) { applyHealth(JSON.parse(statesJson)); };
 window.terraSetBank = function (bankJson) {
@@ -730,16 +820,18 @@ window.terraSetBank = function (bankJson) {
   vault.floors = Math.max(1, Math.min(8, bank.floors || 1 + Math.floor(vault.amount / 50)));
   refreshAllPiles(true);
 };
-// WareTrack-style full world DTO — districts + bank tower from __terraWorldView.
+// WareTrack-style full world DTO — districts + bank + lock markers from __terraWorldView.
 window.__terraWorldView = null;
 window.terraSetWorldView = function (worldViewJson) {
   try {
     window.__terraWorldView = typeof worldViewJson === 'string' ? JSON.parse(worldViewJson) : worldViewJson;
     applyWorldViewDistricts(true);
     applyWorldViewBank(true);
+    applyWorldViewLocks();
   } catch (err) {
     console.warn('[Terra] terraSetWorldView parse failed', err);
     window.__terraWorldView = null;
+    clearLockMarkers();
   }
 };
 window.terraTriggerSpend = function (districtId, amount) { triggerSpend(districtId, amount); };
