@@ -1,3 +1,7 @@
+/**
+ * Offline-first world view selector: pure local slices → TerraWorldViewDTO.
+ * No auth, API, or network — WorldScreen builds from zustand even in offline mode.
+ */
 import type {
   Allocation,
   District,

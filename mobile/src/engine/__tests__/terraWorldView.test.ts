@@ -1,4 +1,9 @@
+import fs from 'fs';
+import path from 'path';
 import { buildTerraWorldViewDTO } from '../terraWorldView';
+import { useAuthStore } from '@/store/authStore';
+import { useBudgetStore } from '@/store/budgetStore';
+import { useGoalsStore } from '@/store/goalsStore';
 import type { Allocation, District, MoneyLock, Transaction } from '@/types';
 
 const NOW = Date.parse('2026-09-15T12:00:00.000Z');
@@ -10,6 +15,10 @@ const groceries: District = {
   icon: '🥬',
   monthlyBudget: 300,
 };
+
+const budgetInitial = useBudgetStore.getState();
+const goalsInitial = useGoalsStore.getState();
+const authInitial = useAuthStore.getState();
 
 describe('buildTerraWorldViewDTO', () => {
   it('empty budget → zero vault/ready/locked and empty or zeroed districts', () => {
@@ -131,5 +140,70 @@ describe('buildTerraWorldViewDTO', () => {
     expect(dto.goals).toEqual([
       { id: 'g1', name: 'Vacation', targetCents: 120000, progressCents: 30000 },
     ]);
+  });
+
+  it('offline auth + local zustand slices still yield a complete DTO (no token / no API)', () => {
+    useAuthStore.setState({ ...authInitial, token: null, mode: 'offline', hasOnboarded: true }, true);
+    useBudgetStore.setState(budgetInitial, true);
+    useGoalsStore.setState(goalsInitial, true);
+
+    expect(useAuthStore.getState().mode).toBe('offline');
+    expect(useAuthStore.getState().token).toBeNull();
+
+    const budget = useBudgetStore.getState();
+    budget.logIncome(400, 'offline pay');
+    const month = useBudgetStore.getState().currentMonth;
+    budget.addToDistrict('groceries', month, 120);
+    budget.lockMoney(40, 7);
+    useGoalsStore.getState().addGoal('Bike', 800);
+
+    const offlineState = useBudgetStore.getState();
+    const goals = useGoalsStore.getState().goals;
+    // Use "now" at/after lock creation so the freeze is active (lockMoney uses Date.now()).
+    const offlineNow = Date.now();
+
+    const dto = buildTerraWorldViewDTO({
+      districts: offlineState.districts,
+      transactions: offlineState.transactions,
+      allocations: offlineState.allocations,
+      currentMonth: offlineState.currentMonth,
+      locks: offlineState.locks ?? [],
+      goals: goals.map((g) => ({ id: g.id, name: g.name, target: g.target })),
+      now: offlineNow,
+    });
+
+    expect(dto.monthKey).toBe(offlineState.currentMonth);
+    expect(dto.asOf).toBeTruthy();
+    expect(dto.vaultCents).toBe(28000); // 400 income − 120 assigned
+    expect(dto.lockedTotalCents).toBe(4000);
+    expect(dto.readyToAssignCents).toBe(24000); // vault − locked
+    expect(dto.districts.length).toBeGreaterThan(0);
+    expect(dto.districts.every((d) => typeof d.healthPct === 'number' && d.stage)).toBe(true);
+    expect(dto.goals).toHaveLength(1);
+    expect(dto.goals[0].name).toBe('Bike');
+    expect(dto.goals[0].targetCents).toBe(80000);
+    expect(dto.locks).toHaveLength(1);
+    expect(dto.meta?.onTrackDistrictCount).toBeGreaterThanOrEqual(0);
+
+    // Builder must not depend on auth — still complete with offline store shape.
+    expect(useAuthStore.getState().token).toBeNull();
+  });
+});
+
+describe('world view offline path (source guard)', () => {
+  it('DTO builder and WorldScreen world-loop modules do not import the API client', () => {
+    const roots = [
+      path.join(__dirname, '../terraWorldView.ts'),
+      path.join(__dirname, '../../screens/WorldScreen.tsx'),
+      path.join(__dirname, '../../components/WorldWebView.tsx'),
+      path.join(__dirname, '../../components/WorldStatusStrip.tsx'),
+      path.join(__dirname, '../../components/DistrictQuickSheet.tsx'),
+      path.join(__dirname, '../../components/PreviewTimelineChip.tsx'),
+    ];
+    for (const file of roots) {
+      const src = fs.readFileSync(file, 'utf8');
+      expect(src).not.toMatch(/from ['"]@\/api(\/|['"])/);
+      expect(src).not.toMatch(/from ['"]\.\.\/api(\/|['"])/);
+    }
   });
 });
