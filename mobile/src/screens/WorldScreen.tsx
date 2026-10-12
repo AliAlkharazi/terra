@@ -9,6 +9,7 @@ import { useGoalsStore } from '@/store/goalsStore';
 import { VillageMap } from '@/components/village/VillageMap';
 import { WorldWebView } from '@/components/WorldWebView';
 import { Scene3DBoundary } from '@/components/Scene3DBoundary';
+import { WorldStatusStrip } from '@/components/WorldStatusStrip';
 import { TapButton } from '@/components/TapButton';
 import { GoalAirplane } from '@/components/GoalAirplane';
 import { useCountUp } from '@/components/money/useCountUp';
@@ -215,6 +216,12 @@ export function WorldScreen({ navigation }: Props) {
             </Scene3DBoundary>
           )}
         </View>
+
+        <WorldStatusStrip
+          worldView={worldView}
+          onReadyPress={() => navigation.navigate('Assign')}
+          onLockedPress={() => navigation.navigate('Lock')}
+        />
 
         <View style={styles.dock}>
           <View style={styles.dockPrimary}>
