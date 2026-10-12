@@ -10,6 +10,7 @@ import { VillageMap } from '@/components/village/VillageMap';
 import { WorldWebView } from '@/components/WorldWebView';
 import { Scene3DBoundary } from '@/components/Scene3DBoundary';
 import { WorldStatusStrip } from '@/components/WorldStatusStrip';
+import { DistrictQuickSheet } from '@/components/DistrictQuickSheet';
 import { TapButton } from '@/components/TapButton';
 import { GoalAirplane } from '@/components/GoalAirplane';
 import { useCountUp } from '@/components/money/useCountUp';
@@ -49,6 +50,7 @@ export function WorldScreen({ navigation }: Props) {
   const [status, setStatus] = useState<string | null>(null);
   const [is3DAvailable, setIs3DAvailable] = useState(true);
   const [wants3D, setWants3D] = useState(true);
+  const [quickDistrictId, setQuickDistrictId] = useState<DistrictId | null>(null);
 
   useEffect(() => {
     const seed = () => useBudgetStore.getState().seedHistory();
@@ -98,11 +100,20 @@ export function WorldScreen({ navigation }: Props) {
     [districts, allocationStates, transactions, vault, currentMonth]
   );
 
+  const openDistrictQuickSheet = useCallback((districtId: DistrictId) => {
+    setQuickDistrictId(districtId);
+  }, []);
+
+  const quickDistrict = useMemo(
+    () => worldView.districts.find((d) => d.id === quickDistrictId) ?? null,
+    [worldView.districts, quickDistrictId]
+  );
+
   const onObjectPress = useCallback(
     (press: TerraWorldObjectPress) => {
       switch (press.kind) {
         case 'district':
-          navigation.navigate('DistrictDetail', { districtId: press.id as DistrictId });
+          openDistrictQuickSheet(press.id as DistrictId);
           break;
         case 'bank':
           navigation.navigate('Assign');
@@ -115,7 +126,7 @@ export function WorldScreen({ navigation }: Props) {
           break;
       }
     },
-    [navigation]
+    [navigation, openDistrictQuickSheet]
   );
 
   const ping = (msg: string) => {
@@ -188,7 +199,7 @@ export function WorldScreen({ navigation }: Props) {
               allocationStates={allocationStates}
               vaultAmount={shownVault}
               lockedAmount={locked}
-              onDistrictPress={(districtId) => navigation.navigate('DistrictDetail', { districtId })}
+              onDistrictPress={openDistrictQuickSheet}
               onVaultPress={() => navigation.navigate('Move')}
             />
           ) : (
@@ -199,7 +210,7 @@ export function WorldScreen({ navigation }: Props) {
                   allocationStates={allocationStates}
                   vaultAmount={shownVault}
                   lockedAmount={locked}
-                  onDistrictPress={(districtId) => navigation.navigate('DistrictDetail', { districtId })}
+                  onDistrictPress={openDistrictQuickSheet}
                   onVaultPress={() => navigation.navigate('Move')}
                 />
               }
@@ -221,6 +232,30 @@ export function WorldScreen({ navigation }: Props) {
           worldView={worldView}
           onReadyPress={() => navigation.navigate('Assign')}
           onLockedPress={() => navigation.navigate('Lock')}
+        />
+
+        <DistrictQuickSheet
+          district={quickDistrict}
+          visible={quickDistrictId != null && quickDistrict != null}
+          onClose={() => setQuickDistrictId(null)}
+          onMove={() => {
+            const id = quickDistrictId;
+            setQuickDistrictId(null);
+            if (id) navigation.navigate('Move', { toId: id });
+          }}
+          onAssign={() => {
+            setQuickDistrictId(null);
+            navigation.navigate('Assign');
+          }}
+          onLock={() => {
+            setQuickDistrictId(null);
+            navigation.navigate('Lock');
+          }}
+          onDetails={() => {
+            const id = quickDistrictId;
+            setQuickDistrictId(null);
+            if (id) navigation.navigate('DistrictDetail', { districtId: id });
+          }}
         />
 
         <View style={styles.dock}>
