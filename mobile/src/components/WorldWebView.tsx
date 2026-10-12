@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import WebView from 'react-native-webview';
 import { AllocationState, BankState, District } from '@/types';
+import type { TerraWorldViewDTO } from '@/types/worldView';
 import type { LastEvent } from '@/store/budgetStore';
 
 interface Props {
@@ -10,6 +11,8 @@ interface Props {
   bankState: BankState;
   lastEvent: LastEvent | null;
   onDistrictPress: (districtId: string) => void;
+  /** WareTrack-style full world DTO; null skips the terraSetWorldView push. */
+  worldView?: TerraWorldViewDTO | null;
 }
 
 function toBridgeHealthPayload(states: AllocationState[]) {
@@ -24,7 +27,14 @@ function toBridgeHealthPayload(states: AllocationState[]) {
   });
 }
 
-export function WorldWebView({ districts, allocationStates, bankState, lastEvent, onDistrictPress }: Props) {
+export function WorldWebView({
+  districts,
+  allocationStates,
+  bankState,
+  lastEvent,
+  onDistrictPress,
+  worldView = null,
+}: Props) {
   const webviewRef = useRef<WebView>(null);
   const isReadyRef = useRef(false);
   const commandQueue = useRef<string[]>([]);
@@ -51,6 +61,11 @@ export function WorldWebView({ districts, allocationStates, bankState, lastEvent
   useEffect(() => {
     dispatch(`window.terraSetBank('${escape(bankState)}'); true;`);
   }, [bankState, dispatch]);
+
+  useEffect(() => {
+    if (worldView == null) return;
+    dispatch(`window.terraSetWorldView('${escape(worldView)}'); true;`);
+  }, [worldView, dispatch]);
 
   useEffect(() => {
     if (!lastEvent || lastEvent.nonce === lastSeenNonce.current) return;

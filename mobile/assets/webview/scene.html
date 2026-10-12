@@ -652,6 +652,16 @@ window.terraSetBank = function (bankJson) {
   vault.amount = bank.totalSaved || 0;
   refreshAllPiles(true);
 };
+// WareTrack-style full world DTO — store only; mesh updates come in a later prompt.
+window.__terraWorldView = null;
+window.terraSetWorldView = function (worldViewJson) {
+  try {
+    window.__terraWorldView = typeof worldViewJson === 'string' ? JSON.parse(worldViewJson) : worldViewJson;
+  } catch (err) {
+    console.warn('[Terra] terraSetWorldView parse failed', err);
+    window.__terraWorldView = null;
+  }
+};
 window.terraTriggerSpend = function (districtId, amount) { triggerSpend(districtId, amount); };
 window.terraTriggerSave = function (amount) { triggerSave(amount); };
 
