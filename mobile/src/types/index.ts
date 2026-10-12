@@ -79,3 +79,12 @@ export interface AllocationState {
   targetProgressPct: number | null; // null if no target set
   requiredMonthlyFunding: number | null; // null if no target set
 }
+
+export type {
+  TerraWorldViewDTO,
+  TerraWorldViewDistrict,
+  TerraWorldViewGoal,
+  TerraWorldViewLock,
+  TerraWorldViewMeta,
+  TerraWorldViewStage,
+} from './worldView';
