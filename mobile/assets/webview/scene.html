@@ -900,18 +900,22 @@ if (!window.ReactNativeWebView) {
     healthPct: (DEMO_HEALTH.find((h) => h.districtId === d.id) || {}).healthPct || 100,
     stage: 'stable',
   }));
+  const DEMO_LOCKS = [
+    { id: 'lock-vault-1', amountCents: 2500, unlockAt: '2026-10-01T00:00:00.000Z', pocketId: 'vault' },
+    { id: 'lock-groceries-1', amountCents: 4000, unlockAt: '2026-10-01T00:00:00.000Z', pocketId: 'groceries' },
+  ];
   setTimeout(() => {
     window.terraSetWorldView(JSON.stringify({
       monthKey: '2026-09',
       asOf: new Date().toISOString(),
       vaultCents: 40000,
       readyToAssignCents: 2500,
-      lockedTotalCents: 0,
+      lockedTotalCents: 6500,
       districts: demoDistricts.map((d) =>
         d.id === 'shopping' ? { ...d, healthPct: 12, stage: 'wilting', availableCents: 1800 } : d
       ),
       goals: [],
-      locks: [],
+      locks: DEMO_LOCKS,
     }));
   }, 1600);
   setTimeout(() => {
@@ -920,12 +924,12 @@ if (!window.ReactNativeWebView) {
       asOf: new Date().toISOString(),
       vaultCents: 40000,
       readyToAssignCents: 240000,
-      lockedTotalCents: 0,
+      lockedTotalCents: 6500,
       districts: demoDistricts.map((d) =>
         d.id === 'shopping' ? { ...d, healthPct: 92, stage: 'thriving', availableCents: 15000 } : d
       ),
       goals: [],
-      locks: [],
+      locks: DEMO_LOCKS,
     }));
   }, 3200);
 
