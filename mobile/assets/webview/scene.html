@@ -552,6 +552,29 @@ function applyWorldViewDistricts(animate) {
   rebuildAllCoins(piles);
 }
 
+/**
+ * Bank / vault tower from __terraWorldView.
+ * Floors/height driven by readyToAssignCents (assignable vault); vaultCents is ignored here (gross pre-lock).
+ * Reuses terraSetBank visual language: vault.amount euros → money-pile height + AVAILABLE sign.
+ */
+function applyWorldViewBank(animate) {
+  if (!vault) return;
+  const view = window.__terraWorldView;
+  if (!view || typeof view.readyToAssignCents !== 'number') return;
+
+  const euros = Math.max(0, view.readyToAssignCents) / 100;
+  // Simple floor scale for future tower stacks (clamp 1–8); pile height still uses amountToHeight(euros).
+  const floors = Math.max(1, Math.min(8, 1 + Math.floor(euros / 50)));
+  vault.amount = euros;
+  vault.floors = floors;
+  updateMoneyPile(vault.pile, vault.amount, animate);
+  // Keep brick footprint scale from buildVault while height animates via updateMoneyPile.
+  vault.pile.brick.scale.x = 1.6;
+  vault.pile.brick.scale.z = 1.6;
+  vault.sign.userData.updateText('AVAILABLE', '€' + Math.round(vault.amount));
+  rebuildAllCoins([vault]);
+}
+
 function refreshAllPiles(animate) {
   for (const p of piles) {
     updateMoneyPile(p.pile, p.amount, animate);
@@ -694,22 +717,26 @@ window.postObjectPress = postObjectPress;
 // =====================================================================
 window.terraSetDistricts = function (districtsJson) {
   buildCity(JSON.parse(districtsJson));
-  // Re-apply DTO district visuals if world view arrived before city meshes existed.
+  // Re-apply DTO visuals if world view arrived before city meshes existed.
   applyWorldViewDistricts(false);
+  applyWorldViewBank(false);
 };
 window.terraSetHealth = function (statesJson) { applyHealth(JSON.parse(statesJson)); };
 window.terraSetBank = function (bankJson) {
+  // Legacy path — prefer terraSetWorldView / __terraWorldView.readyToAssignCents going forward.
   const bank = JSON.parse(bankJson);
   if (!vault) return;
   vault.amount = bank.totalSaved || 0;
+  vault.floors = Math.max(1, Math.min(8, bank.floors || 1 + Math.floor(vault.amount / 50)));
   refreshAllPiles(true);
 };
-// WareTrack-style full world DTO — districts refresh from __terraWorldView only.
+// WareTrack-style full world DTO — districts + bank tower from __terraWorldView.
 window.__terraWorldView = null;
 window.terraSetWorldView = function (worldViewJson) {
   try {
     window.__terraWorldView = typeof worldViewJson === 'string' ? JSON.parse(worldViewJson) : worldViewJson;
     applyWorldViewDistricts(true);
+    applyWorldViewBank(true);
   } catch (err) {
     console.warn('[Terra] terraSetWorldView parse failed', err);
     window.__terraWorldView = null;
@@ -785,8 +812,8 @@ if (!window.ReactNativeWebView) {
     window.terraSetWorldView(JSON.stringify({
       monthKey: '2026-09',
       asOf: new Date().toISOString(),
-      vaultCents: 0,
-      readyToAssignCents: 0,
+      vaultCents: 40000,
+      readyToAssignCents: 2500,
       lockedTotalCents: 0,
       districts: demoDistricts.map((d) =>
         d.id === 'shopping' ? { ...d, healthPct: 12, stage: 'wilting', availableCents: 1800 } : d
@@ -799,8 +826,8 @@ if (!window.ReactNativeWebView) {
     window.terraSetWorldView(JSON.stringify({
       monthKey: '2026-09',
       asOf: new Date().toISOString(),
-      vaultCents: 0,
-      readyToAssignCents: 0,
+      vaultCents: 40000,
+      readyToAssignCents: 240000,
       lockedTotalCents: 0,
       districts: demoDistricts.map((d) =>
         d.id === 'shopping' ? { ...d, healthPct: 92, stage: 'thriving', availableCents: 15000 } : d
