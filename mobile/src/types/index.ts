@@ -87,4 +87,6 @@ export type {
   TerraWorldViewLock,
   TerraWorldViewMeta,
   TerraWorldViewStage,
+  TerraWorldObjectKind,
+  TerraWorldObjectPress,
 } from './worldView';

@@ -626,6 +626,8 @@ renderer.domElement.addEventListener('pointerup', (e) => {
     const pile = piles.find((p) => p.group === obj);
     if (pile) {
       selectPile(pile);
+      // New WareTrack shape + legacy districtPress during transition.
+      postObjectPress('district', pile.districtId);
       postToReactNative({ type: 'districtPress', districtId: pile.districtId });
     }
   }
@@ -639,6 +641,12 @@ function selectPile(pile) {
 function postToReactNative(payload) {
   if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(JSON.stringify(payload));
 }
+
+/** Emit objectPress for district | bank | goal | lock (bank/goal/lock meshes may call later). */
+function postObjectPress(kind, id) {
+  postToReactNative({ type: 'objectPress', kind: kind, id: String(id) });
+}
+window.postObjectPress = postObjectPress;
 
 // =====================================================================
 // BRIDGE — signatures preserved exactly; amount is an optional extra

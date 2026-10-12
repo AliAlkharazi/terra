@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { StyleSheet } from 'react-native';
 import WebView from 'react-native-webview';
 import { AllocationState, BankState, District } from '@/types';
-import type { TerraWorldViewDTO } from '@/types/worldView';
+import type { TerraWorldObjectKind, TerraWorldObjectPress, TerraWorldViewDTO } from '@/types/worldView';
 import type { LastEvent } from '@/store/budgetStore';
 
 interface Props {
@@ -10,10 +10,15 @@ interface Props {
   allocationStates: AllocationState[];
   bankState: BankState;
   lastEvent: LastEvent | null;
-  onDistrictPress: (districtId: string) => void;
+  /** Legacy district-only callback; used when onObjectPress is omitted. */
+  onDistrictPress?: (districtId: string) => void;
+  /** Preferred WareTrack-style press handler (district | bank | goal | lock). */
+  onObjectPress?: (press: TerraWorldObjectPress) => void;
   /** WareTrack-style full world DTO; null skips the terraSetWorldView push. */
   worldView?: TerraWorldViewDTO | null;
 }
+
+const OBJECT_KINDS: TerraWorldObjectKind[] = ['district', 'bank', 'goal', 'lock'];
 
 function toBridgeHealthPayload(states: AllocationState[]) {
   return states.map((s) => {
@@ -27,12 +32,17 @@ function toBridgeHealthPayload(states: AllocationState[]) {
   });
 }
 
+function isObjectKind(value: unknown): value is TerraWorldObjectKind {
+  return typeof value === 'string' && (OBJECT_KINDS as string[]).includes(value);
+}
+
 export function WorldWebView({
   districts,
   allocationStates,
   bankState,
   lastEvent,
   onDistrictPress,
+  onObjectPress,
   worldView = null,
 }: Props) {
   const webviewRef = useRef<WebView>(null);
@@ -80,29 +90,63 @@ export function WorldWebView({
     }
   }, [lastEvent, dispatch]);
 
-  const handleMessage = useCallback((event: { nativeEvent: { data: string } }) => {
-    try {
-      const payload = JSON.parse(event.nativeEvent.data);
-
-      if (payload.type === 'SCENE_READY') {
-        isReadyRef.current = true;
-        const queued = commandQueue.current;
-        commandQueue.current = [];
-        for (const js of queued) {
-          webviewRef.current?.injectJavaScript(js);
-        }
-      } else if (payload.type === 'districtPress') {
-        onDistrictPress(payload.districtId);
-      } else if (payload.type === 'SCENE_ERROR') {
-        console.error(
-          `[Terra WebView error] ${payload.message}` +
-            (payload.source ? ` (${payload.source}:${payload.line})` : '')
-        );
+  const emitPress = useCallback(
+    (press: TerraWorldObjectPress) => {
+      if (onObjectPress) {
+        onObjectPress(press);
+        return;
       }
-    } catch {
-      // ignore malformed bridge messages
-    }
-  }, [onDistrictPress]);
+      if (press.kind === 'district' && onDistrictPress) {
+        onDistrictPress(press.id);
+      }
+    },
+    [onObjectPress, onDistrictPress]
+  );
+
+  const handleMessage = useCallback(
+    (event: { nativeEvent: { data: string } }) => {
+      try {
+        const payload = JSON.parse(event.nativeEvent.data);
+
+        if (payload.type === 'SCENE_READY') {
+          isReadyRef.current = true;
+          const queued = commandQueue.current;
+          commandQueue.current = [];
+          for (const js of queued) {
+            webviewRef.current?.injectJavaScript(js);
+          }
+          return;
+        }
+
+        if (payload.type === 'objectPress' && isObjectKind(payload.kind) && typeof payload.id === 'string') {
+          emitPress({ kind: payload.kind, id: payload.id });
+          return;
+        }
+
+        // Legacy districtPress — support both `id` and historical `districtId`.
+        if (payload.type === 'districtPress') {
+          const id =
+            typeof payload.id === 'string'
+              ? payload.id
+              : typeof payload.districtId === 'string'
+              ? payload.districtId
+              : null;
+          if (id) emitPress({ kind: 'district', id });
+          return;
+        }
+
+        if (payload.type === 'SCENE_ERROR') {
+          console.error(
+            `[Terra WebView error] ${payload.message}` +
+              (payload.source ? ` (${payload.source}:${payload.line})` : '')
+          );
+        }
+      } catch {
+        // ignore malformed bridge messages
+      }
+    },
+    [emitPress]
+  );
 
   return (
     <WebView

@@ -53,3 +53,11 @@ export type TerraWorldViewDTO = {
   locks: TerraWorldViewLock[];
   meta?: TerraWorldViewMeta;
 };
+
+/** Inbound WebView → RN press kinds for the strategy-game scene. */
+export type TerraWorldObjectKind = 'district' | 'bank' | 'goal' | 'lock';
+
+export type TerraWorldObjectPress = {
+  kind: TerraWorldObjectKind;
+  id: string;
+};
