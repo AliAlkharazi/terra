@@ -209,10 +209,7 @@ export function WorldScreen({ navigation }: Props) {
         <View style={styles.mapWrap}>
           {showFlatMap ? (
             <VillageMap
-              districts={districts}
-              allocationStates={allocationStates}
-              vaultAmount={shownVault}
-              lockedAmount={locked}
+              worldView={worldView}
               onDistrictPress={openDistrictQuickSheet}
               onVaultPress={() => navigation.navigate('Move')}
             />
@@ -220,10 +217,7 @@ export function WorldScreen({ navigation }: Props) {
             <Scene3DBoundary
               fallback={
                 <VillageMap
-                  districts={districts}
-                  allocationStates={allocationStates}
-                  vaultAmount={shownVault}
-                  lockedAmount={locked}
+                  worldView={worldView}
                   onDistrictPress={openDistrictQuickSheet}
                   onVaultPress={() => navigation.navigate('Move')}
                 />

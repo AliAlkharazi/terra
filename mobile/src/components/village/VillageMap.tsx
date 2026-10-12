@@ -1,17 +1,17 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Defs, Ellipse, RadialGradient, Stop } from 'react-native-svg';
-import type { AllocationState, District, DistrictId, PocketId } from '@/types';
+import type { DistrictId, PocketId } from '@/types';
+import type { TerraWorldViewDistrict, TerraWorldViewDTO } from '@/types/worldView';
 import { colors, type } from '@/theme/tokens';
 import { formatEuro } from '@/theme/money';
 import { themeFor } from '@/theme/categoryTheme';
+import { worldViewBuildingStressed, worldViewPadColor } from '@/theme/worldViewVisual';
 import { BUILDING_BY_ID, SceneSparkles, VaultBuilding } from './buildings';
 
 interface Props {
-  districts: District[];
-  allocationStates: AllocationState[];
-  vaultAmount: number;
-  lockedAmount?: number;
+  /** Same builder output as WorldWebView — no parallel money math in the map. */
+  worldView: TerraWorldViewDTO;
   onDistrictPress: (districtId: DistrictId) => void;
   onVaultPress: () => void;
 }
@@ -37,12 +37,24 @@ const PADS: Record<string, Pad> = {
   transport: { x: CX, y: CY + DY + 22, rx: 38, ry: 16, theme: 'transport' },
 };
 
-function GrassPad({ pad }: { pad: Pad }) {
+function centsToEuros(cents: number): number {
+  return cents / 100;
+}
+
+function GrassPad({ pad, healthPct }: { pad: Pad; healthPct?: number }) {
   const theme = pad.theme ? themeFor(pad.theme) : null;
+  const padFill =
+    healthPct != null && pad.theme && pad.theme !== 'vault'
+      ? worldViewPadColor(healthPct)
+      : theme?.pad ?? '#8FCB62';
+  const padShadow =
+    healthPct != null && pad.theme && pad.theme !== 'vault'
+      ? worldViewPadColor(Math.max(0, healthPct - 18))
+      : theme?.padShadow ?? '#3A6F34';
   return (
     <>
-      <Ellipse cx={pad.x} cy={pad.y + 8} rx={pad.rx} ry={pad.ry} fill={theme?.padShadow ?? '#3A6F34'} />
-      <Ellipse cx={pad.x} cy={pad.y} rx={pad.rx} ry={pad.ry} fill={theme?.pad ?? '#8FCB62'} opacity={0.92} />
+      <Ellipse cx={pad.x} cy={pad.y + 8} rx={pad.rx} ry={pad.ry} fill={padShadow} />
+      <Ellipse cx={pad.x} cy={pad.y} rx={pad.rx} ry={pad.ry} fill={padFill} opacity={0.92} />
       <Ellipse
         cx={pad.x}
         cy={pad.y - pad.ry * 0.12}
@@ -78,27 +90,25 @@ function hitBox(pad: Pad, sceneW: number, sceneH: number, extra = 0) {
   };
 }
 
-export function VillageMap({
-  districts,
-  allocationStates,
-  vaultAmount,
-  lockedAmount = 0,
-  onDistrictPress,
-  onVaultPress,
-}: Props) {
+export function VillageMap({ worldView, onDistrictPress, onVaultPress }: Props) {
   const { width } = useWindowDimensions();
   const sceneW = Math.min(width - 8, 440);
   const sceneH = sceneW * (SCENE_H / SCENE_W);
 
+  const vaultAmount = centsToEuros(worldView.readyToAssignCents);
+  const lockedAmount = centsToEuros(worldView.lockedTotalCents);
   const vaultLayout = place(PADS.vault, VAULT_SIZE, sceneW, sceneH);
 
-  const spots = districts
-    .filter((d) => !d.isCreditCard && d.id in PADS && d.id in BUILDING_BY_ID)
+  const byId = new Map<DistrictId, TerraWorldViewDistrict>(
+    worldView.districts.map((d) => [d.id, d])
+  );
+
+  const spots = worldView.districts
+    .filter((d) => d.id in PADS && d.id in BUILDING_BY_ID)
     .map((district) => {
       const pad = PADS[district.id];
-      const state = allocationStates.find((s) => s.districtId === district.id);
       const Building = BUILDING_BY_ID[district.id as Exclude<DistrictId, 'credit_card_payment'>];
-      return { district, pad, state, Building };
+      return { district, pad, Building };
     })
     .sort((a, b) => a.pad.y - b.pad.y);
 
@@ -125,8 +135,12 @@ export function VillageMap({
 
         <Ellipse cx={CX} cy={CY - 28} rx="88" ry="68" fill="url(#vaultGlow)" />
 
-        {Object.values(PADS).map((pad) => (
-          <GrassPad key={`${pad.x}-${pad.y}`} pad={pad} />
+        {Object.entries(PADS).map(([key, pad]) => (
+          <GrassPad
+            key={`${pad.x}-${pad.y}`}
+            pad={pad}
+            healthPct={key === 'vault' ? undefined : byId.get(key as DistrictId)?.healthPct}
+          />
         ))}
 
         <SceneSparkles />
@@ -143,17 +157,26 @@ export function VillageMap({
         ) : null}
       </View>
 
-      {spots.map(({ district, pad, state, Building }) => (
-        <View key={district.id} pointerEvents="none" style={[styles.spot, place(pad, BUILDING_SIZE, sceneW, sceneH)]}>
-          <Building size={BUILDING_SIZE} overspent={state?.isOverspent} />
-          <Text style={[styles.caption, { color: themeFor(district.id).ink }]} numberOfLines={1}>
-            {district.label}
-          </Text>
-          <Text style={[styles.amount, { color: themeFor(district.id).accent }, state?.isOverspent && styles.amountOverspent]}>
-            {formatEuro(state?.available ?? 0, { cents: false })}
-          </Text>
-        </View>
-      ))}
+      {spots.map(({ district, pad, Building }) => {
+        const stressed = worldViewBuildingStressed(district.healthPct, district.availableCents);
+        return (
+          <View key={district.id} pointerEvents="none" style={[styles.spot, place(pad, BUILDING_SIZE, sceneW, sceneH)]}>
+            <Building size={BUILDING_SIZE} overspent={stressed} />
+            <Text style={[styles.caption, { color: themeFor(district.id).ink }]} numberOfLines={1}>
+              {district.label}
+            </Text>
+            <Text
+              style={[
+                styles.amount,
+                { color: themeFor(district.id).accent },
+                stressed && styles.amountOverspent,
+              ]}
+            >
+              {formatEuro(centsToEuros(district.availableCents), { cents: false })}
+            </Text>
+          </View>
+        );
+      })}
 
       <Pressable onPress={onVaultPress} style={[styles.hit, hitBox(PADS.vault, sceneW, sceneH, 14)]} />
       {spots.map(({ district, pad }) => (
