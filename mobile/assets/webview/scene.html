@@ -512,6 +512,46 @@ function applyHealth(states) {
   refreshAllPiles(true);
 }
 
+/** Fallback when DTO omits healthPct — stage labels only, no money math. */
+const STAGE_HEALTH = { thriving: 90, stable: 65, strained: 40, wilting: 15 };
+
+/**
+ * District pads/piles read ONLY from window.__terraWorldView.districts.
+ * Uses healthPct (or stage) for pad color and availableCents for pile height/sign.
+ * Missing scene meshes are skipped quietly.
+ */
+function applyWorldViewDistricts(animate) {
+  const view = window.__terraWorldView;
+  if (!view || !Array.isArray(view.districts)) return;
+
+  for (const d of view.districts) {
+    const p = piles.find((x) => x.districtId === d.id);
+    if (!p) continue;
+
+    const healthPct =
+      typeof d.healthPct === 'number'
+        ? d.healthPct
+        : STAGE_HEALTH[d.stage] != null
+        ? STAGE_HEALTH[d.stage]
+        : p.healthPct;
+    p.healthPct = healthPct;
+    p.topMat.color.copy(healthColor(healthPct));
+
+    if (typeof d.availableCents === 'number') {
+      p.amount = Math.max(0, d.availableCents) / 100;
+    }
+    if (typeof d.label === 'string' && d.label) {
+      p.label = d.label;
+    }
+  }
+
+  for (const p of piles) {
+    updateMoneyPile(p.pile, p.amount, animate);
+    p.sign.userData.updateText(p.label, '€' + Math.round(p.amount));
+  }
+  rebuildAllCoins(piles);
+}
+
 function refreshAllPiles(animate) {
   for (const p of piles) {
     updateMoneyPile(p.pile, p.amount, animate);
@@ -652,7 +692,11 @@ window.postObjectPress = postObjectPress;
 // BRIDGE — signatures preserved exactly; amount is an optional extra
 // argument React Native may now pass for better animations.
 // =====================================================================
-window.terraSetDistricts = function (districtsJson) { buildCity(JSON.parse(districtsJson)); };
+window.terraSetDistricts = function (districtsJson) {
+  buildCity(JSON.parse(districtsJson));
+  // Re-apply DTO district visuals if world view arrived before city meshes existed.
+  applyWorldViewDistricts(false);
+};
 window.terraSetHealth = function (statesJson) { applyHealth(JSON.parse(statesJson)); };
 window.terraSetBank = function (bankJson) {
   const bank = JSON.parse(bankJson);
@@ -660,11 +704,12 @@ window.terraSetBank = function (bankJson) {
   vault.amount = bank.totalSaved || 0;
   refreshAllPiles(true);
 };
-// WareTrack-style full world DTO — store only; mesh updates come in a later prompt.
+// WareTrack-style full world DTO — districts refresh from __terraWorldView only.
 window.__terraWorldView = null;
 window.terraSetWorldView = function (worldViewJson) {
   try {
     window.__terraWorldView = typeof worldViewJson === 'string' ? JSON.parse(worldViewJson) : worldViewJson;
+    applyWorldViewDistricts(true);
   } catch (err) {
     console.warn('[Terra] terraSetWorldView parse failed', err);
     window.__terraWorldView = null;
@@ -725,8 +770,48 @@ if (!window.ReactNativeWebView) {
   applyHealth(DEMO_HEALTH);
   window.terraSetBank(JSON.stringify({ totalSaved: 2430, floors: 4 }));
 
-  setTimeout(() => triggerSpend('shopping', 47), 2200);
-  setTimeout(() => triggerSave(50), 4200);
+  // Fixture: healthy vs wilting shopping pad via terraSetWorldView (DTO fields only).
+  const demoDistricts = DEMO_DISTRICTS.map((d) => ({
+    id: d.id,
+    label: d.label,
+    availableCents: (d.monthlyBudget || 0) * 100,
+    assignedCents: (d.monthlyBudget || 0) * 100,
+    spentCents: 0,
+    lockedCents: 0,
+    healthPct: (DEMO_HEALTH.find((h) => h.districtId === d.id) || {}).healthPct || 100,
+    stage: 'stable',
+  }));
+  setTimeout(() => {
+    window.terraSetWorldView(JSON.stringify({
+      monthKey: '2026-09',
+      asOf: new Date().toISOString(),
+      vaultCents: 0,
+      readyToAssignCents: 0,
+      lockedTotalCents: 0,
+      districts: demoDistricts.map((d) =>
+        d.id === 'shopping' ? { ...d, healthPct: 12, stage: 'wilting', availableCents: 1800 } : d
+      ),
+      goals: [],
+      locks: [],
+    }));
+  }, 1600);
+  setTimeout(() => {
+    window.terraSetWorldView(JSON.stringify({
+      monthKey: '2026-09',
+      asOf: new Date().toISOString(),
+      vaultCents: 0,
+      readyToAssignCents: 0,
+      lockedTotalCents: 0,
+      districts: demoDistricts.map((d) =>
+        d.id === 'shopping' ? { ...d, healthPct: 92, stage: 'thriving', availableCents: 15000 } : d
+      ),
+      goals: [],
+      locks: [],
+    }));
+  }, 3200);
+
+  setTimeout(() => triggerSpend('shopping', 47), 4800);
+  setTimeout(() => triggerSave(50), 6200);
 }
 </script>
 </body>
